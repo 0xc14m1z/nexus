@@ -9,8 +9,9 @@ defmodule Nexus.Session do
   @type id :: String.t()
   @type t :: %__MODULE__{
           id: id() | nil,
-          created_at: DateTime.t() | nil
+          created_at: DateTime.t() | nil,
+          updated_at: DateTime.t() | nil
         }
 
-  defstruct [:id, :created_at]
+  defstruct [:id, :created_at, :updated_at]
 end
