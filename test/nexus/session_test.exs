@@ -3,6 +3,10 @@ defmodule Nexus.SessionTest do
 
   alias Nexus.Session
 
+  test "new/0 returns an empty session struct" do
+    assert %Session{id: nil, created_at: nil} = Session.new()
+  end
+
   test "ensure_id/1 returns the existing session id when one is already present" do
     assert Session.ensure_id("session_123") == "session_123"
   end
