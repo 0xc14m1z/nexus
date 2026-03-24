@@ -3,18 +3,7 @@ defmodule Nexus.SessionTest do
 
   alias Nexus.Session
 
-  test "new/0 returns an empty session struct" do
-    assert %Session{id: nil, created_at: nil} = Session.new()
-  end
-
-  test "ensure_id/1 returns the existing session id when one is already present" do
-    assert Session.ensure_id("session_123") == "session_123"
-  end
-
-  test "ensure_id/1 creates a session id when the input is nil" do
-    session_id = Session.ensure_id(nil)
-
-    assert is_binary(session_id)
-    assert String.starts_with?(session_id, "session_")
+  test "session is a minimal data structure with id and created_at" do
+    assert %Session{id: nil, created_at: nil} = %Session{}
   end
 end

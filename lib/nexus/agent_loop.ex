@@ -15,18 +15,18 @@ defmodule Nexus.AgentLoop do
 
   alias Nexus.Message.Inbound
   alias Nexus.Message.Outbound
-  alias Nexus.Session
 
   @doc """
   Executes one minimal agent turn.
 
   The provider module must implement `Nexus.Provider`.
+  The inbound message must already belong to a session.
   """
   @spec run(Inbound.t(), module()) :: {:ok, Outbound.t()} | {:error, term()}
   def run(%Inbound{} = inbound, provider) do
-    with :ok <- validate_provider(provider) do
+    with :ok <- validate_provider(provider),
+         {:ok, session_id} <- validate_session_id(inbound.session_id) do
       prompt = to_string(inbound.content)
-      session_id = Session.ensure_id(inbound.session_id)
 
       case provider.generate(prompt) do
         {:ok, generated_text} ->
@@ -60,4 +60,7 @@ defmodule Nexus.AgentLoop do
   defp validate_provider(provider) do
     {:error, {:invalid_provider, provider}}
   end
+
+  defp validate_session_id(session_id) when is_binary(session_id), do: {:ok, session_id}
+  defp validate_session_id(_session_id), do: {:error, :missing_session_id}
 end

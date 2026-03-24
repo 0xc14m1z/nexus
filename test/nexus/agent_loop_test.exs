@@ -34,7 +34,7 @@ defmodule Nexus.AgentLoopTest do
     assert {:error, {:invalid_provider, String}} = AgentLoop.run(inbound, String)
   end
 
-  test "run/2 assigns a session id when the inbound message does not have one" do
+  test "run/2 returns an error when the inbound message does not have a session id" do
     inbound = %Inbound{
       session_id: nil,
       channel: :cli,
@@ -42,7 +42,6 @@ defmodule Nexus.AgentLoopTest do
       metadata: %{}
     }
 
-    assert {:ok, %Outbound{session_id: session_id}} = AgentLoop.run(inbound, Fake)
-    assert String.starts_with?(session_id, "session_")
+    assert {:error, :missing_session_id} = AgentLoop.run(inbound, Fake)
   end
 end

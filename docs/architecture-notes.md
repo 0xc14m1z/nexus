@@ -191,6 +191,18 @@ Raw message history is different from long-term knowledge.
 
 Operational snapshots are different from append-only history.
 
+## SessionStore Semantics
+
+Current working decision:
+
+- `SessionStore.get/1` loads a session by id
+- `SessionStore.save/1` has upsert-like semantics
+- if a session still has no id, the store may assign it during `save/1`
+- `save/1` returns the persisted session value
+
+The internal implementation is adapter-specific.
+The observable behaviour must remain stable across adapters.
+
 ### Core Domain is not an Adapter Layer
 
 Not everything should become pluggable.
