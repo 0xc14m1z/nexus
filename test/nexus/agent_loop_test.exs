@@ -1,10 +1,10 @@
-defmodule Nexus.RunnerTest do
+defmodule Nexus.AgentLoopTest do
   use ExUnit.Case
 
+  alias Nexus.AgentLoop
   alias Nexus.Message.Inbound
   alias Nexus.Message.Outbound
   alias Nexus.Providers.Fake
-  alias Nexus.Runner
 
   test "run/2 converts inbound content into an outbound message through the provider" do
     inbound = %Inbound{
@@ -20,7 +20,7 @@ defmodule Nexus.RunnerTest do
               channel: :cli,
               content: "Fake response: hello nexus",
               metadata: %{}
-            }} = Runner.run(inbound, Fake)
+            }} = AgentLoop.run(inbound, Fake)
   end
 
   test "run/2 returns an invalid provider error for a module that is not a provider" do
@@ -31,7 +31,7 @@ defmodule Nexus.RunnerTest do
       metadata: %{}
     }
 
-    assert {:error, {:invalid_provider, String}} = Runner.run(inbound, String)
+    assert {:error, {:invalid_provider, String}} = AgentLoop.run(inbound, String)
   end
 
   test "run/2 assigns a session id when the inbound message does not have one" do
@@ -42,7 +42,7 @@ defmodule Nexus.RunnerTest do
       metadata: %{}
     }
 
-    assert {:ok, %Outbound{session_id: session_id}} = Runner.run(inbound, Fake)
+    assert {:ok, %Outbound{session_id: session_id}} = AgentLoop.run(inbound, Fake)
     assert String.starts_with?(session_id, "session_")
   end
 end

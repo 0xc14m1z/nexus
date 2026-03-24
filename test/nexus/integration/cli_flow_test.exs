@@ -3,9 +3,9 @@ defmodule Nexus.Integration.CLIFlowTest do
 
   import ExUnit.CaptureIO
 
+  alias Nexus.AgentLoop
   alias Nexus.Channels.CLI
   alias Nexus.Providers.Fake
-  alias Nexus.Runner
 
   test "a CLI payload can flow through normalization, provider generation, and delivery" do
     raw_input = %{
@@ -14,7 +14,7 @@ defmodule Nexus.Integration.CLIFlowTest do
     }
 
     assert {:ok, inbound} = CLI.normalize_inbound(raw_input)
-    assert {:ok, outbound} = Runner.run(inbound, Fake)
+    assert {:ok, outbound} = AgentLoop.run(inbound, Fake)
 
     output =
       capture_io(fn ->

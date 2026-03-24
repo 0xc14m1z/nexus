@@ -1,16 +1,16 @@
-defmodule Nexus.Runner do
+defmodule Nexus.AgentLoop do
   @moduledoc """
-  Temporary minimal flow runner used to exercise the first end-to-end path.
+  Minimal synchronous agent loop.
 
-  This module is intentionally small and may disappear later when orchestration and
-  the real agent loop are introduced.
-
-  For now it does only this:
+  This first version is intentionally small and executes a single turn:
 
   - receives an inbound message
   - treats the inbound content as the provider prompt
   - calls the chosen provider
   - wraps the generated text into an outbound message
+
+  It is not yet a GenServer and it does not manage tools, history, or retries.
+  Those responsibilities will arrive later as the real runtime grows.
   """
 
   alias Nexus.Message.Inbound
@@ -18,10 +18,11 @@ defmodule Nexus.Runner do
   alias Nexus.Session
 
   @doc """
-  Runs the smallest possible message flow.
+  Executes one minimal agent turn.
 
   The provider module must implement `Nexus.Provider`.
   """
+  @spec run(Inbound.t(), module()) :: {:ok, Outbound.t()} | {:error, term()}
   def run(%Inbound{} = inbound, provider) do
     with :ok <- validate_provider(provider) do
       prompt = to_string(inbound.content)
