@@ -13,6 +13,7 @@ defmodule Nexus.AgentLoop do
   Those responsibilities will arrive later as the real runtime grows.
   """
 
+  alias Nexus.AdapterValidator
   alias Nexus.Message.Inbound
   alias Nexus.Message.Outbound
 
@@ -24,7 +25,7 @@ defmodule Nexus.AgentLoop do
   """
   @spec run(Inbound.t(), module()) :: {:ok, Outbound.t()} | {:error, term()}
   def run(%Inbound{} = inbound, provider) do
-    with :ok <- validate_provider(provider),
+    with :ok <- AdapterValidator.validate_provider(provider),
          {:ok, session_id} <- validate_session_id(inbound.session_id) do
       prompt = to_string(inbound.content)
 
@@ -42,23 +43,6 @@ defmodule Nexus.AgentLoop do
           {:error, reason}
       end
     end
-  end
-
-  defp validate_provider(provider) when is_atom(provider) do
-    cond do
-      not Code.ensure_loaded?(provider) ->
-        {:error, {:invalid_provider, provider}}
-
-      not function_exported?(provider, :generate, 1) ->
-        {:error, {:invalid_provider, provider}}
-
-      true ->
-        :ok
-    end
-  end
-
-  defp validate_provider(provider) do
-    {:error, {:invalid_provider, provider}}
   end
 
   defp validate_session_id(session_id) when is_binary(session_id), do: {:ok, session_id}
