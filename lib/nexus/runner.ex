@@ -15,6 +15,7 @@ defmodule Nexus.Runner do
 
   alias Nexus.Message.Inbound
   alias Nexus.Message.Outbound
+  alias Nexus.Session
 
   @doc """
   Runs the smallest possible message flow.
@@ -24,12 +25,13 @@ defmodule Nexus.Runner do
   def run(%Inbound{} = inbound, provider) do
     with :ok <- validate_provider(provider) do
       prompt = to_string(inbound.content)
+      session_id = Session.ensure_id(inbound.session_id)
 
       case provider.generate(prompt) do
         {:ok, generated_text} ->
           {:ok,
            %Outbound{
-             session_id: inbound.session_id || "session_pending",
+             session_id: session_id,
              channel: inbound.channel,
              content: generated_text,
              metadata: %{}

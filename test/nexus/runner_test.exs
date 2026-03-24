@@ -33,4 +33,16 @@ defmodule Nexus.RunnerTest do
 
     assert {:error, {:invalid_provider, String}} = Runner.run(inbound, String)
   end
+
+  test "run/2 assigns a session id when the inbound message does not have one" do
+    inbound = %Inbound{
+      session_id: nil,
+      channel: :cli,
+      content: "hello nexus",
+      metadata: %{}
+    }
+
+    assert {:ok, %Outbound{session_id: session_id}} = Runner.run(inbound, Fake)
+    assert String.starts_with?(session_id, "session_")
+  end
 end
