@@ -1,20 +1,26 @@
 defmodule Nexus.Integration.CLIFlowTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: false
 
   import ExUnit.CaptureIO
 
-  alias Nexus.AgentLoop
   alias Nexus.Channels.CLI
+  alias Nexus.Orchestrator
   alias Nexus.Providers.Fake
+  alias Nexus.SessionStores.InMemory
+
+  setup do
+    InMemory.clear()
+    :ok
+  end
 
   test "a CLI payload can flow through normalization, provider generation, and delivery" do
     raw_input = %{
-      session_id: "session_123",
+      session_id: nil,
       content: "hello nexus"
     }
 
     assert {:ok, inbound} = CLI.normalize_inbound(raw_input)
-    assert {:ok, outbound} = AgentLoop.run(inbound, Fake)
+    assert {:ok, outbound} = Orchestrator.run(inbound, Fake, InMemory)
 
     output =
       capture_io(fn ->
