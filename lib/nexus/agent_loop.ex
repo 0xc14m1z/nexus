@@ -14,6 +14,7 @@ defmodule Nexus.AgentLoop do
   """
 
   alias Nexus.AdapterValidator
+  alias Nexus.ContextBuilder
   alias Nexus.Message.Inbound
   alias Nexus.Message.Outbound
 
@@ -26,22 +27,16 @@ defmodule Nexus.AgentLoop do
   @spec run(Inbound.t(), module()) :: {:ok, Outbound.t()} | {:error, term()}
   def run(%Inbound{} = inbound, provider) do
     with :ok <- AdapterValidator.validate_provider(provider),
-         {:ok, session_id} <- validate_session_id(inbound.session_id) do
-      prompt = to_string(inbound.content)
-
-      case provider.generate(prompt) do
-        {:ok, generated_text} ->
-          {:ok,
-           %Outbound{
-             session_id: session_id,
-             channel: inbound.channel,
-             content: generated_text,
-             metadata: %{}
-           }}
-
-        {:error, reason} ->
-          {:error, reason}
-      end
+         {:ok, session_id} <- validate_session_id(inbound.session_id),
+         {:ok, prompt} <- ContextBuilder.build_prompt(inbound),
+         {:ok, generated_text} <- provider.generate(prompt) do
+      {:ok,
+       %Outbound{
+         session_id: session_id,
+         channel: inbound.channel,
+         content: generated_text,
+         metadata: %{}
+       }}
     end
   end
 
