@@ -6,18 +6,20 @@ defmodule Nexus.Provider do
 
   In this first version, the contract is intentionally small:
 
-  - the runtime sends a prompt as a string
+  - the runtime sends a list of internal LLM messages
   - the provider returns generated text as a string
 
   This keeps the role of the provider easy to understand before we introduce more
   advanced concepts such as multi-message conversations, tool calls, or streaming.
   """
 
+  alias Nexus.LLM.Message
+
   @doc """
-  Generates text from a prompt string.
+  Generates text from a list of LLM messages.
 
   The provider does not know anything about channels or outbound runtime messages.
-  Its job is only to take a prompt and return generated text.
+  Its job is only to take structured context and return generated text.
   """
-  @callback generate(prompt :: String.t()) :: {:ok, String.t()} | {:error, term()}
+  @callback generate(messages :: [Message.t()]) :: {:ok, String.t()} | {:error, term()}
 end

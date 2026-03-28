@@ -1,9 +1,16 @@
 defmodule Nexus.Providers.FakeTest do
   use ExUnit.Case
 
+  alias Nexus.LLM.Message
   alias Nexus.Providers.Fake
 
-  test "generate/1 returns a deterministic response based on the prompt" do
-    assert {:ok, "Fake response: hello nexus"} = Fake.generate("hello nexus")
+  test "generate/1 returns a deterministic response based on the messages" do
+    messages = [
+      %Message{role: :system, content: "You are Nexus."},
+      %Message{role: :user, content: "hello nexus"}
+    ]
+
+    assert {:ok, "Fake response: System:\nYou are Nexus.\n\nUser:\nhello nexus"} =
+             Fake.generate(messages)
   end
 end

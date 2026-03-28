@@ -18,9 +18,12 @@ defmodule Nexus.AgentLoopTest do
             %Outbound{
               session_id: "session_123",
               channel: :cli,
-              content: "Fake response: hello nexus",
+              content: generated_content,
               metadata: %{}
             }} = AgentLoop.run(inbound, Fake)
+
+    assert generated_content ==
+             "Fake response: System:\nYou are Nexus.\nHelp the user understand and build the agent framework step by step.\n\nUser:\nhello nexus"
   end
 
   test "run/2 returns an invalid provider error for a module that is not a provider" do

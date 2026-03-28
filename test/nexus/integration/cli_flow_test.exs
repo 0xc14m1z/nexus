@@ -27,6 +27,7 @@ defmodule Nexus.Integration.CLIFlowTest do
         assert :ok = CLI.deliver(outbound)
       end)
 
-    assert output == "Fake response: hello nexus\n"
+    assert output ==
+             "Fake response: System:\nYou are Nexus.\nHelp the user understand and build the agent framework step by step.\n\nUser:\nhello nexus\n"
   end
 end

@@ -28,8 +28,8 @@ defmodule Nexus.AgentLoop do
   def run(%Inbound{} = inbound, provider) do
     with :ok <- AdapterValidator.validate_provider(provider),
          {:ok, session_id} <- validate_session_id(inbound.session_id),
-         {:ok, prompt} <- ContextBuilder.build_prompt(inbound),
-         {:ok, generated_text} <- provider.generate(prompt) do
+         {:ok, messages} <- ContextBuilder.build_messages(inbound),
+         {:ok, generated_text} <- provider.generate(messages) do
       {:ok,
        %Outbound{
          session_id: session_id,
