@@ -16,7 +16,8 @@ defmodule Nexus.ContextBuilderTest do
     expected_messages = [
       %Message{
         role: :system,
-        content: "You are Nexus.\nHelp the user understand and build the agent framework step by step."
+        content:
+          "You are Nexus.\nHelp the user understand and build the agent framework step by step."
       },
       %Message{role: :user, content: "hello nexus"}
     ]
