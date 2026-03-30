@@ -15,6 +15,7 @@ defmodule Nexus.AgentLoop do
 
   alias Nexus.AdapterValidator
   alias Nexus.ContextBuilder
+  alias Nexus.AgentLoop.Result
   alias Nexus.Message
 
   @doc """
@@ -23,18 +24,28 @@ defmodule Nexus.AgentLoop do
   The provider module must implement `Nexus.Provider`.
   The inbound message must already belong to a session.
   """
-  @spec run(Message.Inbound.t(), module()) :: {:ok, Message.Outbound.t()} | {:error, term()}
+  @spec run(Message.Inbound.t(), module()) :: {:ok, Result.t()} | {:error, term()}
   def run(%Message.Inbound{} = inbound, provider) do
     with :ok <- AdapterValidator.validate_provider(provider),
          {:ok, session_id} <- validate_session_id(inbound.session_id),
          {:ok, messages} <- ContextBuilder.build_messages(inbound),
          {:ok, generated_text} <- provider.generate(messages) do
+      outbound = %Message.Outbound{
+        session_id: session_id,
+        channel: inbound.channel,
+        content: generated_text,
+        metadata: %{}
+      }
+
       {:ok,
-       %Message.Outbound{
-         session_id: session_id,
-         channel: inbound.channel,
-         content: generated_text,
-         metadata: %{}
+       %Result{
+         outbound: outbound,
+         transcript_messages: [
+           %Message.Transcript.Assistant{
+             session_id: session_id,
+             content: generated_text
+           }
+         ]
        }}
     end
   end

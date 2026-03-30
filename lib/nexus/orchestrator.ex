@@ -28,9 +28,9 @@ defmodule Nexus.Orchestrator do
       inbound = Map.put(inbound, :session_id, session.id)
 
       with {:ok, _message} <- append_user_message(inbound, transcript_store),
-           {:ok, outbound} <- AgentLoop.run(inbound, provider),
-           {:ok, _message} <- append_assistant_message(outbound, transcript_store) do
-        {:ok, outbound}
+           {:ok, result} <- AgentLoop.run(inbound, provider),
+           :ok <- append_transcript_messages(result.transcript_messages, transcript_store) do
+        {:ok, result.outbound}
       end
     end
   end
@@ -61,10 +61,12 @@ defmodule Nexus.Orchestrator do
     {:error, :unsupported_inbound_content_for_transcript}
   end
 
-  defp append_assistant_message(%Message.Outbound{} = outbound, transcript_store) do
-    transcript_store.append(%Message.Transcript.Assistant{
-      session_id: outbound.session_id,
-      content: outbound.content
-    })
+  defp append_transcript_messages(messages, transcript_store) when is_list(messages) do
+    Enum.reduce_while(messages, :ok, fn message, :ok ->
+      case transcript_store.append(message) do
+        {:ok, _persisted} -> {:cont, :ok}
+        {:error, reason} -> {:halt, {:error, reason}}
+      end
+    end)
   end
 end

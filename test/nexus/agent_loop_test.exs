@@ -2,6 +2,7 @@ defmodule Nexus.AgentLoopTest do
   use ExUnit.Case
 
   alias Nexus.AgentLoop
+  alias Nexus.AgentLoop.Result
   alias Nexus.Message
   alias Nexus.Providers.Fake
 
@@ -14,11 +15,16 @@ defmodule Nexus.AgentLoopTest do
     }
 
     assert {:ok,
-            %Message.Outbound{
-              session_id: "session_123",
-              channel: :cli,
-              content: generated_content,
-              metadata: %{}
+            %Result{
+              outbound: %Message.Outbound{
+                session_id: "session_123",
+                channel: :cli,
+                content: generated_content,
+                metadata: %{}
+              },
+              transcript_messages: [
+                %Message.Transcript.Assistant{content: generated_content}
+              ]
             }} = AgentLoop.run(inbound, Fake)
 
     assert generated_content ==
