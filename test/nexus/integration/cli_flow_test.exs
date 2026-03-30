@@ -4,12 +4,14 @@ defmodule Nexus.Integration.CLIFlowTest do
   import ExUnit.CaptureIO
 
   alias Nexus.Channels.CLI
+  alias Nexus.MessageStores.InMemory, as: InMemoryMessageStore
   alias Nexus.Orchestrator
   alias Nexus.Providers.Fake
   alias Nexus.SessionStores.InMemory
 
   setup do
     InMemory.clear()
+    InMemoryMessageStore.clear()
     :ok
   end
 
@@ -20,7 +22,7 @@ defmodule Nexus.Integration.CLIFlowTest do
     }
 
     assert {:ok, inbound} = CLI.normalize_inbound(raw_input)
-    assert {:ok, outbound} = Orchestrator.run(inbound, Fake, InMemory)
+    assert {:ok, outbound} = Orchestrator.run(inbound, Fake, InMemory, InMemoryMessageStore)
 
     output =
       capture_io(fn ->

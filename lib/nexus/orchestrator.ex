@@ -16,17 +16,23 @@ defmodule Nexus.Orchestrator do
   alias Nexus.Message.Inbound
   alias Nexus.Message.Outbound
   alias Nexus.Session
+  alias Nexus.SessionMessage
 
   @doc """
   Resolves or creates the session for an inbound message and executes one agent turn.
   """
-  @spec run(Inbound.t(), module(), module()) :: {:ok, Outbound.t()} | {:error, term()}
-  def run(%Inbound{} = inbound, provider, session_store) do
+  @spec run(Inbound.t(), module(), module(), module()) :: {:ok, Outbound.t()} | {:error, term()}
+  def run(%Inbound{} = inbound, provider, session_store, message_store) do
     with :ok <- AdapterValidator.validate_session_store(session_store),
+         :ok <- AdapterValidator.validate_message_store(message_store),
          {:ok, session} <- resolve_session(inbound.session_id, session_store) do
-      inbound
-      |> Map.put(:session_id, session.id)
-      |> AgentLoop.run(provider)
+      inbound = Map.put(inbound, :session_id, session.id)
+
+      with {:ok, _message} <- append_user_message(inbound, message_store),
+           {:ok, outbound} <- AgentLoop.run(inbound, provider),
+           {:ok, _message} <- append_assistant_message(outbound, message_store) do
+        {:ok, outbound}
+      end
     end
   end
 
@@ -39,5 +45,26 @@ defmodule Nexus.Orchestrator do
       {:ok, session} -> {:ok, session}
       :not_found -> {:error, :session_not_found}
     end
+  end
+
+  defp append_user_message(%Inbound{session_id: session_id, content: content}, message_store)
+       when is_binary(content) do
+    message_store.append(%SessionMessage{
+      session_id: session_id,
+      role: :user,
+      content: content
+    })
+  end
+
+  defp append_user_message(%Inbound{}, _message_store) do
+    {:error, :unsupported_inbound_content_for_transcript}
+  end
+
+  defp append_assistant_message(%Outbound{} = outbound, message_store) do
+    message_store.append(%SessionMessage{
+      session_id: outbound.session_id,
+      role: :assistant,
+      content: outbound.content
+    })
   end
 end

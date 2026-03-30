@@ -32,6 +32,14 @@ defmodule Nexus.AdapterValidator do
     validate_callbacks(module, [{:normalize_inbound, 1}, {:deliver, 1}], :invalid_channel)
   end
 
+  @doc """
+  Validates a message store module.
+  """
+  @spec validate_message_store(module()) :: :ok | {:error, {atom(), module()}}
+  def validate_message_store(module) do
+    validate_callbacks(module, [{:append, 1}, {:list_by_session, 1}], :invalid_message_store)
+  end
+
   defp validate_callbacks(module, callbacks, error_tag)
        when is_atom(module) and is_atom(error_tag) do
     cond do
