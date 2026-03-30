@@ -4,8 +4,7 @@ defmodule Nexus.Channels.CLITest do
   import ExUnit.CaptureIO
 
   alias Nexus.Channels.CLI
-  alias Nexus.Message.Inbound
-  alias Nexus.Message.Outbound
+  alias Nexus.Message
 
   test "normalize_inbound/1 builds an inbound message from valid CLI input" do
     raw = %{
@@ -15,7 +14,7 @@ defmodule Nexus.Channels.CLITest do
     }
 
     assert {:ok,
-            %Inbound{
+            %Message.Inbound{
               session_id: "session_123",
               channel: :cli,
               content: "hello from the terminal",
@@ -28,7 +27,7 @@ defmodule Nexus.Channels.CLITest do
   end
 
   test "deliver/1 prints outbound content to stdout" do
-    outbound = %Outbound{
+    outbound = %Message.Outbound{
       session_id: "session_123",
       channel: :cli,
       content: "reply from runtime",

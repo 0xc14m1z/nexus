@@ -15,8 +15,7 @@ defmodule Nexus.AgentLoop do
 
   alias Nexus.AdapterValidator
   alias Nexus.ContextBuilder
-  alias Nexus.Message.Inbound
-  alias Nexus.Message.Outbound
+  alias Nexus.Message
 
   @doc """
   Executes one minimal agent turn.
@@ -24,14 +23,14 @@ defmodule Nexus.AgentLoop do
   The provider module must implement `Nexus.Provider`.
   The inbound message must already belong to a session.
   """
-  @spec run(Inbound.t(), module()) :: {:ok, Outbound.t()} | {:error, term()}
-  def run(%Inbound{} = inbound, provider) do
+  @spec run(Message.Inbound.t(), module()) :: {:ok, Message.Outbound.t()} | {:error, term()}
+  def run(%Message.Inbound{} = inbound, provider) do
     with :ok <- AdapterValidator.validate_provider(provider),
          {:ok, session_id} <- validate_session_id(inbound.session_id),
          {:ok, messages} <- ContextBuilder.build_messages(inbound),
          {:ok, generated_text} <- provider.generate(messages) do
       {:ok,
-       %Outbound{
+       %Message.Outbound{
          session_id: session_id,
          channel: inbound.channel,
          content: generated_text,

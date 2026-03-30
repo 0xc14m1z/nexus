@@ -9,7 +9,7 @@ defmodule Nexus.Providers.Fake do
 
   @behaviour Nexus.Provider
 
-  alias Nexus.LLM.Message
+  alias Nexus.Message
 
   @impl true
   def generate(messages) when is_list(messages) do
@@ -21,7 +21,7 @@ defmodule Nexus.Providers.Fake do
     {:ok, "Fake response: " <> rendered_messages}
   end
 
-  defp render_message(%Message{role: role, content: content}) do
+  defp render_message(%Message.LLM{role: role, content: content}) do
     "#{format_role(role)}:\n#{content}"
   end
 

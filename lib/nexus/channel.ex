@@ -13,8 +13,7 @@ defmodule Nexus.Channel do
   while we are still learning the architecture.
   """
 
-  alias Nexus.Message.Inbound
-  alias Nexus.Message.Outbound
+  alias Nexus.Message
 
   @doc """
   Converts raw channel input into the internal inbound message format.
@@ -28,7 +27,7 @@ defmodule Nexus.Channel do
   The job of the channel is to normalize that raw input into a common
   `%Nexus.Message.Inbound{}` struct that the rest of the runtime can understand.
   """
-  @callback normalize_inbound(raw :: term()) :: {:ok, Inbound.t()} | {:error, term()}
+  @callback normalize_inbound(raw :: term()) :: {:ok, Message.Inbound.t()} | {:error, term()}
 
   @doc """
   Delivers an internal outbound message through the external channel.
@@ -37,5 +36,5 @@ defmodule Nexus.Channel do
   it has produced a `%Nexus.Message.Outbound{}` and that the channel adapter is
   responsible for getting it back out.
   """
-  @callback deliver(message :: Outbound.t()) :: :ok | {:error, term()}
+  @callback deliver(message :: Message.Outbound.t()) :: :ok | {:error, term()}
 end

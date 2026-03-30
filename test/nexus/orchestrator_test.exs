@@ -1,29 +1,28 @@
 defmodule Nexus.OrchestratorTest do
   use ExUnit.Case, async: false
 
-  alias Nexus.Message.Inbound
-  alias Nexus.MessageStores.InMemory, as: InMemoryMessageStore
+  alias Nexus.Message
+  alias Nexus.TranscriptStores.InMemory, as: InMemoryTranscriptStore
   alias Nexus.Orchestrator
   alias Nexus.Providers.Fake
   alias Nexus.Session
-  alias Nexus.SessionMessage
   alias Nexus.SessionStores.InMemory
 
   setup do
     InMemory.clear()
-    InMemoryMessageStore.clear()
+    InMemoryTranscriptStore.clear()
     :ok
   end
 
   test "run/4 creates a session through the store when the inbound message has no session id" do
-    inbound = %Inbound{
+    inbound = %Message.Inbound{
       session_id: nil,
       channel: :cli,
       content: "hello nexus",
       metadata: %{}
     }
 
-    assert {:ok, outbound} = Orchestrator.run(inbound, Fake, InMemory, InMemoryMessageStore)
+    assert {:ok, outbound} = Orchestrator.run(inbound, Fake, InMemory, InMemoryTranscriptStore)
     assert is_binary(outbound.session_id)
     assert {:ok, %Session{id: id}} = InMemory.get(outbound.session_id)
     assert id == outbound.session_id
@@ -32,31 +31,31 @@ defmodule Nexus.OrchestratorTest do
   test "run/4 reuses an existing session from the store" do
     assert {:ok, %Session{id: session_id}} = InMemory.save(%Session{})
 
-    inbound = %Inbound{
+    inbound = %Message.Inbound{
       session_id: session_id,
       channel: :cli,
       content: "hello again",
       metadata: %{}
     }
 
-    assert {:ok, outbound} = Orchestrator.run(inbound, Fake, InMemory, InMemoryMessageStore)
+    assert {:ok, outbound} = Orchestrator.run(inbound, Fake, InMemory, InMemoryTranscriptStore)
     assert outbound.session_id == session_id
   end
 
   test "run/4 persists the user and assistant transcript messages" do
-    inbound = %Inbound{
+    inbound = %Message.Inbound{
       session_id: nil,
       channel: :cli,
       content: "hello nexus",
       metadata: %{}
     }
 
-    assert {:ok, outbound} = Orchestrator.run(inbound, Fake, InMemory, InMemoryMessageStore)
-    assert {:ok, messages} = InMemoryMessageStore.list_by_session(outbound.session_id)
+    assert {:ok, outbound} = Orchestrator.run(inbound, Fake, InMemory, InMemoryTranscriptStore)
+    assert {:ok, messages} = InMemoryTranscriptStore.list_by_session(outbound.session_id)
 
     assert [
-             %SessionMessage{role: :user, content: "hello nexus"},
-             %SessionMessage{
+             %Message.Transcript{role: :user, content: "hello nexus"},
+             %Message.Transcript{
                role: :assistant,
                content:
                  "Fake response: System:\nYou are Nexus.\nHelp the user understand and build the agent framework step by step.\n\nUser:\nhello nexus"
@@ -65,7 +64,7 @@ defmodule Nexus.OrchestratorTest do
   end
 
   test "run/4 returns an error when the requested session does not exist" do
-    inbound = %Inbound{
+    inbound = %Message.Inbound{
       session_id: "session_missing",
       channel: :cli,
       content: "hello nexus",
@@ -73,11 +72,11 @@ defmodule Nexus.OrchestratorTest do
     }
 
     assert {:error, :session_not_found} =
-             Orchestrator.run(inbound, Fake, InMemory, InMemoryMessageStore)
+             Orchestrator.run(inbound, Fake, InMemory, InMemoryTranscriptStore)
   end
 
   test "run/4 returns an invalid session store error for a module that is not a session store" do
-    inbound = %Inbound{
+    inbound = %Message.Inbound{
       session_id: nil,
       channel: :cli,
       content: "hello nexus",
@@ -85,18 +84,18 @@ defmodule Nexus.OrchestratorTest do
     }
 
     assert {:error, {:invalid_session_store, String}} =
-             Orchestrator.run(inbound, Fake, String, InMemoryMessageStore)
+             Orchestrator.run(inbound, Fake, String, InMemoryTranscriptStore)
   end
 
-  test "run/4 returns an invalid message store error for a module that is not a message store" do
-    inbound = %Inbound{
+  test "run/4 returns an invalid transcript store error for a module that is not a transcript store" do
+    inbound = %Message.Inbound{
       session_id: nil,
       channel: :cli,
       content: "hello nexus",
       metadata: %{}
     }
 
-    assert {:error, {:invalid_message_store, String}} =
+    assert {:error, {:invalid_transcript_store, String}} =
              Orchestrator.run(inbound, Fake, InMemory, String)
   end
 end

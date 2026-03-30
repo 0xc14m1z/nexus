@@ -1,4 +1,4 @@
-defmodule Nexus.MessageStore do
+defmodule Nexus.TranscriptStore do
   @moduledoc """
   Behaviour for persisting and reading session transcript messages.
 
@@ -7,20 +7,20 @@ defmodule Nexus.MessageStore do
   does not store runtime events.
   """
 
-  alias Nexus.SessionMessage
+  alias Nexus.Message
 
   @doc """
   Appends a session message to the transcript and returns the persisted value.
 
   Implementations may assign `id` and `inserted_at` if they are missing.
   """
-  @callback append(message :: SessionMessage.t()) ::
-              {:ok, SessionMessage.t()} | {:error, term()}
+  @callback append(message :: Message.Transcript.t()) ::
+              {:ok, Message.Transcript.t()} | {:error, term()}
 
   @doc """
   Lists all persisted session messages for a given session, ordered from oldest
   to newest.
   """
   @callback list_by_session(session_id :: String.t()) ::
-              {:ok, [SessionMessage.t()]} | {:error, term()}
+              {:ok, [Message.Transcript.t()]} | {:error, term()}
 end

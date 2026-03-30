@@ -7,24 +7,23 @@ defmodule Nexus.ContextBuilder do
   messages.
   """
 
-  alias Nexus.LLM.Message
-  alias Nexus.Message.Inbound
+  alias Nexus.Message
 
   @doc """
   Builds the provider messages for a single inbound message.
   """
-  @spec build_messages(Inbound.t()) :: {:ok, [Message.t()]} | {:error, term()}
-  def build_messages(%Inbound{content: content}) when is_binary(content) do
+  @spec build_messages(Message.Inbound.t()) :: {:ok, [Message.LLM.t()]} | {:error, term()}
+  def build_messages(%Message.Inbound{content: content}) when is_binary(content) do
     with {:ok, system_prompt} <- read_system_prompt() do
       {:ok,
        [
-         %Message{role: :system, content: system_prompt},
-         %Message{role: :user, content: content}
+         %Message.LLM{role: :system, content: system_prompt},
+         %Message.LLM{role: :user, content: content}
        ]}
     end
   end
 
-  def build_messages(%Inbound{}) do
+  def build_messages(%Message.Inbound{}) do
     {:error, :unsupported_inbound_content}
   end
 

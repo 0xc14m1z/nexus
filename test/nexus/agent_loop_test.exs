@@ -2,12 +2,11 @@ defmodule Nexus.AgentLoopTest do
   use ExUnit.Case
 
   alias Nexus.AgentLoop
-  alias Nexus.Message.Inbound
-  alias Nexus.Message.Outbound
+  alias Nexus.Message
   alias Nexus.Providers.Fake
 
   test "run/2 converts inbound content into an outbound message through the provider" do
-    inbound = %Inbound{
+    inbound = %Message.Inbound{
       session_id: "session_123",
       channel: :cli,
       content: "hello nexus",
@@ -15,7 +14,7 @@ defmodule Nexus.AgentLoopTest do
     }
 
     assert {:ok,
-            %Outbound{
+            %Message.Outbound{
               session_id: "session_123",
               channel: :cli,
               content: generated_content,
@@ -27,7 +26,7 @@ defmodule Nexus.AgentLoopTest do
   end
 
   test "run/2 returns an invalid provider error for a module that is not a provider" do
-    inbound = %Inbound{
+    inbound = %Message.Inbound{
       session_id: "session_123",
       channel: :cli,
       content: "hello nexus",
@@ -38,7 +37,7 @@ defmodule Nexus.AgentLoopTest do
   end
 
   test "run/2 returns an error when the inbound message does not have a session id" do
-    inbound = %Inbound{
+    inbound = %Message.Inbound{
       session_id: nil,
       channel: :cli,
       content: "hello nexus",

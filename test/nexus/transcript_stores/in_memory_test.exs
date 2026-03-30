@@ -1,8 +1,8 @@
-defmodule Nexus.MessageStores.InMemoryTest do
+defmodule Nexus.TranscriptStores.InMemoryTest do
   use ExUnit.Case, async: false
 
-  alias Nexus.MessageStores.InMemory
-  alias Nexus.SessionMessage
+  alias Nexus.Message
+  alias Nexus.TranscriptStores.InMemory
 
   setup do
     InMemory.clear()
@@ -10,7 +10,7 @@ defmodule Nexus.MessageStores.InMemoryTest do
   end
 
   test "append/1 assigns id and inserted_at when missing" do
-    message = %SessionMessage{
+    message = %Message.Transcript{
       session_id: "session_123",
       role: :user,
       content: "hello"
@@ -25,21 +25,21 @@ defmodule Nexus.MessageStores.InMemoryTest do
     older = ~U[2026-03-28 10:00:00Z]
     newer = ~U[2026-03-28 10:05:00Z]
 
-    InMemory.append(%SessionMessage{
+    InMemory.append(%Message.Transcript{
       session_id: "session_123",
       role: :assistant,
       content: "second",
       inserted_at: newer
     })
 
-    InMemory.append(%SessionMessage{
+    InMemory.append(%Message.Transcript{
       session_id: "session_123",
       role: :user,
       content: "first",
       inserted_at: older
     })
 
-    InMemory.append(%SessionMessage{
+    InMemory.append(%Message.Transcript{
       session_id: "session_other",
       role: :user,
       content: "other"

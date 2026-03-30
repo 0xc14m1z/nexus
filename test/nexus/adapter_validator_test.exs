@@ -3,7 +3,7 @@ defmodule Nexus.AdapterValidatorTest do
 
   alias Nexus.AdapterValidator
   alias Nexus.Channels.CLI
-  alias Nexus.MessageStores.InMemory, as: InMemoryMessageStore
+  alias Nexus.TranscriptStores.InMemory, as: InMemoryTranscriptStore
   alias Nexus.Providers.Fake
   alias Nexus.SessionStores.InMemory, as: InMemorySessionStore
 
@@ -32,12 +32,12 @@ defmodule Nexus.AdapterValidatorTest do
     assert {:error, {:invalid_channel, String}} = AdapterValidator.validate_channel(String)
   end
 
-  test "validate_message_store/1 accepts a valid message store" do
-    assert :ok = AdapterValidator.validate_message_store(InMemoryMessageStore)
+  test "validate_transcript_store/1 accepts a valid transcript store" do
+    assert :ok = AdapterValidator.validate_transcript_store(InMemoryTranscriptStore)
   end
 
-  test "validate_message_store/1 rejects a module that is not a message store" do
-    assert {:error, {:invalid_message_store, String}} =
-             AdapterValidator.validate_message_store(String)
+  test "validate_transcript_store/1 rejects a module that is not a transcript store" do
+    assert {:error, {:invalid_transcript_store, String}} =
+             AdapterValidator.validate_transcript_store(String)
   end
 end

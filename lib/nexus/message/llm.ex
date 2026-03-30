@@ -1,4 +1,4 @@
-defmodule Nexus.LLM.Message do
+defmodule Nexus.Message.LLM do
   @moduledoc """
   Minimal internal message format used to talk to LLM providers.
   """

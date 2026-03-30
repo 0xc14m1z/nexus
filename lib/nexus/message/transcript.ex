@@ -1,4 +1,4 @@
-defmodule Nexus.SessionMessage do
+defmodule Nexus.Message.Transcript do
   @moduledoc """
   Minimal persisted message shape for a session transcript.
 

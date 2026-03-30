@@ -13,7 +13,7 @@ defmodule Nexus.Provider do
   advanced concepts such as multi-message conversations, tool calls, or streaming.
   """
 
-  alias Nexus.LLM.Message
+  alias Nexus.Message
 
   @doc """
   Generates text from a list of LLM messages.
@@ -21,5 +21,5 @@ defmodule Nexus.Provider do
   The provider does not know anything about channels or outbound runtime messages.
   Its job is only to take structured context and return generated text.
   """
-  @callback generate(messages :: [Message.t()]) :: {:ok, String.t()} | {:error, term()}
+  @callback generate(messages :: [Message.LLM.t()]) :: {:ok, String.t()} | {:error, term()}
 end

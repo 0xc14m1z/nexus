@@ -15,8 +15,7 @@ defmodule Nexus.Channels.CLI do
 
   @behaviour Nexus.Channel
 
-  alias Nexus.Message.Inbound
-  alias Nexus.Message.Outbound
+  alias Nexus.Message
 
   @doc """
   Normalizes a minimal CLI payload into an inbound message.
@@ -33,7 +32,7 @@ defmodule Nexus.Channels.CLI do
   def normalize_inbound(%{session_id: session_id, content: content} = raw)
       when (is_binary(session_id) or is_nil(session_id)) and not is_nil(content) do
     {:ok,
-     %Inbound{
+     %Message.Inbound{
        session_id: session_id,
        channel: :cli,
        content: content,
@@ -49,7 +48,7 @@ defmodule Nexus.Channels.CLI do
   Delivers an outbound message by printing its content.
   """
   @impl true
-  def deliver(%Outbound{content: content}) do
+  def deliver(%Message.Outbound{content: content}) do
     IO.puts(format_content(content))
     :ok
   end

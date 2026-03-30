@@ -1,13 +1,13 @@
-defmodule Nexus.MessageStores.InMemory do
+defmodule Nexus.TranscriptStores.InMemory do
   @moduledoc """
-  ETS-backed in-memory implementation of `Nexus.MessageStore`.
+  ETS-backed in-memory implementation of `Nexus.TranscriptStore`.
   """
 
-  @behaviour Nexus.MessageStore
+  @behaviour Nexus.TranscriptStore
 
-  alias Nexus.SessionMessage
+  alias Nexus.Message
 
-  @table :nexus_message_store
+  @table :nexus_transcript_store
 
   @doc """
   Clears all persisted messages. Intended for tests.
@@ -19,7 +19,7 @@ defmodule Nexus.MessageStores.InMemory do
   end
 
   @impl true
-  def append(%SessionMessage{} = message) do
+  def append(%Message.Transcript{} = message) do
     ensure_table()
 
     persisted_message = persistable_message(message)
@@ -43,10 +43,10 @@ defmodule Nexus.MessageStores.InMemory do
     {:ok, messages}
   end
 
-  defp persistable_message(%SessionMessage{} = message) do
+  defp persistable_message(%Message.Transcript{} = message) do
     now = DateTime.utc_now()
 
-    %SessionMessage{
+    %Message.Transcript{
       message
       | id: message.id || build_id(),
         inserted_at: message.inserted_at || now

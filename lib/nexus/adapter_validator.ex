@@ -33,11 +33,11 @@ defmodule Nexus.AdapterValidator do
   end
 
   @doc """
-  Validates a message store module.
+  Validates a transcript store module.
   """
-  @spec validate_message_store(module()) :: :ok | {:error, {atom(), module()}}
-  def validate_message_store(module) do
-    validate_callbacks(module, [{:append, 1}, {:list_by_session, 1}], :invalid_message_store)
+  @spec validate_transcript_store(module()) :: :ok | {:error, {atom(), module()}}
+  def validate_transcript_store(module) do
+    validate_callbacks(module, [{:append, 1}, {:list_by_session, 1}], :invalid_transcript_store)
   end
 
   defp validate_callbacks(module, callbacks, error_tag)
