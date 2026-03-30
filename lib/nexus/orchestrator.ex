@@ -51,9 +51,8 @@ defmodule Nexus.Orchestrator do
          transcript_store
        )
        when is_binary(content) do
-    transcript_store.append(%Message.Transcript{
+    transcript_store.append(%Message.Transcript.User{
       session_id: session_id,
-      role: :user,
       content: content
     })
   end
@@ -63,9 +62,8 @@ defmodule Nexus.Orchestrator do
   end
 
   defp append_assistant_message(%Message.Outbound{} = outbound, transcript_store) do
-    transcript_store.append(%Message.Transcript{
+    transcript_store.append(%Message.Transcript.Assistant{
       session_id: outbound.session_id,
-      role: :assistant,
       content: outbound.content
     })
   end

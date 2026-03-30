@@ -9,6 +9,12 @@ defmodule Nexus.TranscriptStores.InMemory do
 
   @table :nexus_transcript_store
 
+  defguardp is_transcript_message(message)
+            when is_struct(message, Message.Transcript.User) or
+                   is_struct(message, Message.Transcript.Assistant) or
+                   is_struct(message, Message.Transcript.AssistantToolCall) or
+                   is_struct(message, Message.Transcript.Tool)
+
   @doc """
   Clears all persisted messages. Intended for tests.
   """
@@ -19,7 +25,7 @@ defmodule Nexus.TranscriptStores.InMemory do
   end
 
   @impl true
-  def append(%Message.Transcript{} = message) do
+  def append(message) when is_transcript_message(message) do
     ensure_table()
 
     persisted_message = persistable_message(message)
@@ -43,14 +49,13 @@ defmodule Nexus.TranscriptStores.InMemory do
     {:ok, messages}
   end
 
-  defp persistable_message(%Message.Transcript{} = message) do
+  defp persistable_message(message) when is_transcript_message(message) do
     now = DateTime.utc_now()
 
-    %Message.Transcript{
-      message
-      | id: message.id || build_id(),
-        inserted_at: message.inserted_at || now
-    }
+    struct(message, %{
+      id: Map.get(message, :id) || build_id(),
+      inserted_at: Map.get(message, :inserted_at) || now
+    })
   end
 
   defp build_id do

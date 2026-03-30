@@ -10,9 +10,8 @@ defmodule Nexus.TranscriptStores.InMemoryTest do
   end
 
   test "append/1 assigns id and inserted_at when missing" do
-    message = %Message.Transcript{
+    message = %Message.Transcript.User{
       session_id: "session_123",
-      role: :user,
       content: "hello"
     }
 
@@ -25,28 +24,40 @@ defmodule Nexus.TranscriptStores.InMemoryTest do
     older = ~U[2026-03-28 10:00:00Z]
     newer = ~U[2026-03-28 10:05:00Z]
 
-    InMemory.append(%Message.Transcript{
+    InMemory.append(%Message.Transcript.Assistant{
       session_id: "session_123",
-      role: :assistant,
       content: "second",
       inserted_at: newer
     })
 
-    InMemory.append(%Message.Transcript{
+    InMemory.append(%Message.Transcript.User{
       session_id: "session_123",
-      role: :user,
       content: "first",
       inserted_at: older
     })
 
-    InMemory.append(%Message.Transcript{
+    InMemory.append(%Message.Transcript.User{
       session_id: "session_other",
-      role: :user,
       content: "other"
     })
 
     assert {:ok, messages} = InMemory.list_by_session("session_123")
 
     assert Enum.map(messages, & &1.content) == ["first", "second"]
+  end
+
+  test "append/1 preserves tool-related transcript fields" do
+    message = %Message.Transcript.Tool{
+      session_id: "session_123",
+      content: "search results",
+      tool_call_id: "call_123",
+      name: "web_search"
+    }
+
+    assert {:ok, persisted_message} = InMemory.append(message)
+
+    assert persisted_message.tool_call_id == "call_123"
+    assert persisted_message.name == "web_search"
+    assert persisted_message.content == "search results"
   end
 end

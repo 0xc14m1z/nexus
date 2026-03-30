@@ -1,21 +1,16 @@
 defmodule Nexus.Message.Transcript do
   @moduledoc """
-  Minimal persisted message shape for a session transcript.
+  Union type for persisted transcript messages.
 
-  A session message is not a transport-level inbound/outbound message and it is
-  not a provider-facing LLM message. It is the conversation item we want to keep
-  in session history so later turns can reconstruct context.
+  Transcript messages model the persisted conversational history of a session.
+  Unlike transport messages or provider-facing LLM messages, they represent the
+  canonical items we keep between turns.
   """
 
-  @type role :: :user | :assistant
+  alias Nexus.Message.Transcript.Assistant
+  alias Nexus.Message.Transcript.AssistantToolCall
+  alias Nexus.Message.Transcript.Tool
+  alias Nexus.Message.Transcript.User
 
-  @type t :: %__MODULE__{
-          id: String.t() | nil,
-          session_id: String.t(),
-          role: role(),
-          content: String.t(),
-          inserted_at: DateTime.t() | nil
-        }
-
-  defstruct [:id, :session_id, :role, :content, :inserted_at]
+  @type t :: User.t() | Assistant.t() | AssistantToolCall.t() | Tool.t()
 end

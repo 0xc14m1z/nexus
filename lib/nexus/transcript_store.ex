@@ -2,8 +2,8 @@ defmodule Nexus.TranscriptStore do
   @moduledoc """
   Behaviour for persisting and reading session transcript messages.
 
-  The message store is responsible only for the conversation history tied to a
-  session. It does not store transport-level inbound/outbound messages and it
+  The transcript store is responsible only for the conversation history tied to
+  a session. It does not store transport-level inbound/outbound messages and it
   does not store runtime events.
   """
 

@@ -54,9 +54,8 @@ defmodule Nexus.OrchestratorTest do
     assert {:ok, messages} = InMemoryTranscriptStore.list_by_session(outbound.session_id)
 
     assert [
-             %Message.Transcript{role: :user, content: "hello nexus"},
-             %Message.Transcript{
-               role: :assistant,
+             %Message.Transcript.User{content: "hello nexus"},
+             %Message.Transcript.Assistant{
                content:
                  "Fake response: System:\nYou are Nexus.\nHelp the user understand and build the agent framework step by step.\n\nUser:\nhello nexus"
              }
