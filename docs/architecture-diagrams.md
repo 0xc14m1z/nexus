@@ -110,11 +110,13 @@ flowchart TD
   - `Message.Transcript.Assistant`
 - tool-related transcript messages are defined, but not yet consumed by the builder
 - the current provider path is still synchronous and non-streaming
+- a minimal Anthropic adapter exists, but the repo does not yet expose a dedicated
+  manual smoke-test command for it
 
 ## Next Likely Step
 
 The next planned implementation step is:
 
-- add a minimal real provider adapter and run the first smoke test with a real LLM
+- add a tiny manual smoke path for the Anthropic adapter and run the first real LLM test
 
-That should happen after this documentation rhythm improvement, not before.
+The adapter exists now; the next step is making it easy to exercise from the terminal.

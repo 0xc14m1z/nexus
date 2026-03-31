@@ -21,6 +21,7 @@ The repository currently includes:
   - `AgentLoop`
   - `ContextBuilder`
   - `FakeProvider`
+  - `AnthropicProvider` (minimal, non-streaming)
   - in-memory `SessionStore`
   - in-memory `TranscriptStore`
 - architecture notes and implementation plans
@@ -84,8 +85,8 @@ If you want to understand the runtime step by step, read these in order:
 
 ## Near-Term Goal
 
-The next implementation target is a minimal real-provider vertical slice,
-and it will continue to be built slowly and explicitly:
+The next implementation target is a tiny manual smoke path for the Anthropic
+provider, and it will continue to be built slowly and explicitly:
 
 - one small file at a time
 - with explanations of purpose and structure
