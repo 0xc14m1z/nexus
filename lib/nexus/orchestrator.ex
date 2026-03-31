@@ -28,9 +28,16 @@ defmodule Nexus.Orchestrator do
       inbound = Map.put(inbound, :session_id, session.id)
 
       with {:ok, _message} <- append_user_message(inbound, transcript_store),
-           {:ok, result} <- AgentLoop.run(inbound, provider),
+           {:ok, transcript_messages} <- transcript_store.list_by_session(session.id),
+           {:ok, result} <- AgentLoop.run(session.id, transcript_messages, provider),
            :ok <- append_transcript_messages(result.transcript_messages, transcript_store) do
-        {:ok, result.outbound}
+        {:ok,
+         %Message.Outbound{
+           session_id: session.id,
+           channel: inbound.channel,
+           content: result.assistant_content,
+           metadata: %{}
+         }}
       end
     end
   end
@@ -39,6 +46,8 @@ defmodule Nexus.Orchestrator do
     session_store.save(%Session{})
   end
 
+  # When the caller already provides a session id, the orchestrator must reuse
+  # that exact session instead of silently creating a new one.
   defp resolve_session(session_id, session_store) when is_binary(session_id) do
     case session_store.get(session_id) do
       {:ok, session} -> {:ok, session}
@@ -46,6 +55,8 @@ defmodule Nexus.Orchestrator do
     end
   end
 
+  # The inbound message belongs to the transport boundary, so we translate it
+  # into the canonical persisted transcript shape before the agent loop runs.
   defp append_user_message(
          %Message.Inbound{session_id: session_id, content: content},
          transcript_store
@@ -61,6 +72,8 @@ defmodule Nexus.Orchestrator do
     {:error, :unsupported_inbound_content_for_transcript}
   end
 
+  # The agent loop can produce one or more transcript items for a turn. The
+  # orchestrator persists them in order and stops at the first store error.
   defp append_transcript_messages(messages, transcript_store) when is_list(messages) do
     Enum.reduce_while(messages, :ok, fn message, :ok ->
       case transcript_store.append(message) do

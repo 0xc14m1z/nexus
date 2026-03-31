@@ -62,6 +62,32 @@ defmodule Nexus.OrchestratorTest do
            ] = messages
   end
 
+  test "run/4 builds the next turn from the existing session transcript" do
+    first_inbound = %Message.Inbound{
+      session_id: nil,
+      channel: :cli,
+      content: "hello nexus",
+      metadata: %{}
+    }
+
+    assert {:ok, first_outbound} =
+             Orchestrator.run(first_inbound, Fake, InMemory, InMemoryTranscriptStore)
+
+    second_inbound = %Message.Inbound{
+      session_id: first_outbound.session_id,
+      channel: :cli,
+      content: "continue",
+      metadata: %{}
+    }
+
+    assert {:ok, second_outbound} =
+             Orchestrator.run(second_inbound, Fake, InMemory, InMemoryTranscriptStore)
+
+    assert second_outbound.content =~ "User:\nhello nexus"
+    assert second_outbound.content =~ "Assistant:\nFake response: System:"
+    assert second_outbound.content =~ "User:\ncontinue"
+  end
+
   test "run/4 returns an error when the requested session does not exist" do
     inbound = %Message.Inbound{
       session_id: "session_missing",

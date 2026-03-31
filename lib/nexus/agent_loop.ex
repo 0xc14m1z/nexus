@@ -4,10 +4,11 @@ defmodule Nexus.AgentLoop do
 
   This first version is intentionally small and executes a single turn:
 
-  - receives an inbound message
-  - treats the inbound content as the provider prompt
+  - receives a session id
+  - receives the current session transcript
+  - asks the context builder to turn that transcript into provider messages
   - calls the chosen provider
-  - wraps the generated text into an outbound message
+  - returns the generated assistant content and transcript result
 
   It is not yet a GenServer and it does not manage tools, history, or retries.
   Those responsibilities will arrive later as the real runtime grows.
@@ -22,24 +23,18 @@ defmodule Nexus.AgentLoop do
   Executes one minimal agent turn.
 
   The provider module must implement `Nexus.Provider`.
-  The inbound message must already belong to a session.
+  The session id must already be resolved by the orchestrator.
   """
-  @spec run(Message.Inbound.t(), module()) :: {:ok, Result.t()} | {:error, term()}
-  def run(%Message.Inbound{} = inbound, provider) do
+  @spec run(String.t(), [Message.Transcript.t()], module()) ::
+          {:ok, Result.t()} | {:error, term()}
+  def run(session_id, transcript_messages, provider) do
     with :ok <- AdapterValidator.validate_provider(provider),
-         {:ok, session_id} <- validate_session_id(inbound.session_id),
-         {:ok, messages} <- ContextBuilder.build_messages(inbound),
+         {:ok, session_id} <- validate_session_id(session_id),
+         {:ok, messages} <- ContextBuilder.build_messages(transcript_messages),
          {:ok, generated_text} <- provider.generate(messages) do
-      outbound = %Message.Outbound{
-        session_id: session_id,
-        channel: inbound.channel,
-        content: generated_text,
-        metadata: %{}
-      }
-
       {:ok,
        %Result{
-         outbound: outbound,
+         assistant_content: generated_text,
          transcript_messages: [
            %Message.Transcript.Assistant{
              session_id: session_id,
@@ -50,6 +45,8 @@ defmodule Nexus.AgentLoop do
     end
   end
 
+  # The orchestrator is responsible for resolving or creating the session
+  # before delegating the turn to the agent loop.
   defp validate_session_id(session_id) when is_binary(session_id), do: {:ok, session_id}
   defp validate_session_id(_session_id), do: {:error, :missing_session_id}
 end
