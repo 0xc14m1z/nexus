@@ -15,6 +15,8 @@ That means implementation must optimize for understanding, not only speed.
 6. Prefer real runnable smoke tests over large batches of isolated unit tests.
 7. Avoid introducing multiple new abstractions in the same step unless they are inseparable.
 8. If the current code becomes too dense to follow, simplify before continuing.
+9. After each meaningful architecture change, update `docs/architecture-diagrams.md`.
+10. Prefer a small Mermaid diagram when it makes structure or runtime flow easier to understand.
 
 ## Practical Consequence
 
