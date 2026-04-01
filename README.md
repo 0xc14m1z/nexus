@@ -54,6 +54,9 @@ flowchart LR
 7. The provider adapter generates assistant content.
 8. The `Orchestrator` persists the new transcript messages and builds `Message.Outbound`.
 
+Provider-specific configuration is expected to come from external runtime
+configuration, not from the provider adapter itself.
+
 ## Run the Baseline
 
 Use these commands from the project root:
