@@ -14,7 +14,7 @@ defmodule Nexus.AgentLoop do
   Those responsibilities will arrive later as the real runtime grows.
   """
 
-  alias Nexus.AdapterValidator
+  alias Nexus.ProviderInstance
   alias Nexus.ContextBuilder
   alias Nexus.AgentLoop.Result
   alias Nexus.Message
@@ -22,16 +22,15 @@ defmodule Nexus.AgentLoop do
   @doc """
   Executes one minimal agent turn.
 
-  The provider module must implement `Nexus.Provider`.
+  The provider must already be configured by the orchestrator.
   The session id must already be resolved by the orchestrator.
   """
-  @spec run(String.t(), [Message.Transcript.t()], module()) ::
+  @spec run(String.t(), [Message.Transcript.t()], ProviderInstance.t()) ::
           {:ok, Result.t()} | {:error, term()}
-  def run(session_id, transcript_messages, provider) do
-    with :ok <- AdapterValidator.validate_provider(provider),
-         {:ok, session_id} <- validate_session_id(session_id),
+  def run(session_id, transcript_messages, %ProviderInstance{} = provider) do
+    with {:ok, session_id} <- validate_session_id(session_id),
          {:ok, messages} <- ContextBuilder.build_messages(transcript_messages),
-         {:ok, generated_text} <- provider.generate(messages) do
+         {:ok, generated_text} <- ProviderInstance.generate(provider, messages) do
       {:ok,
        %Result{
          assistant_content: generated_text,
@@ -43,6 +42,10 @@ defmodule Nexus.AgentLoop do
          ]
        }}
     end
+  end
+
+  def run(_session_id, _transcript_messages, provider) do
+    {:error, {:invalid_provider_reference, provider}}
   end
 
   # The orchestrator is responsible for resolving or creating the session

@@ -15,11 +15,12 @@ flowchart LR
     Orchestrator[Orchestrator]
     SessionStore[SessionStore]
     TranscriptStore[TranscriptStore]
+    ProviderInstance[ProviderInstance]
     AgentLoop[AgentLoop]
     ContextBuilder[ContextBuilder]
     SystemPrompt[priv/prompts/system.md]
     LLMMessages[Message.LLM[]]
-    Provider[Provider]
+    Provider[Provider Adapter]
     Result[AgentLoop.Result]
     Outbound[Message.Outbound]
 
@@ -28,13 +29,16 @@ flowchart LR
     Inbound --> Orchestrator
     Orchestrator --> SessionStore
     Orchestrator --> TranscriptStore
+    Orchestrator --> ProviderInstance
+    ProviderInstance --> Provider
     Orchestrator --> AgentLoop
     TranscriptStore --> AgentLoop
     AgentLoop --> ContextBuilder
     ContextBuilder --> SystemPrompt
     ContextBuilder --> LLMMessages
     LLMMessages --> Provider
-    Provider --> AgentLoop
+    Provider --> ProviderInstance
+    ProviderInstance --> AgentLoop
     AgentLoop --> Result
     Result --> Orchestrator
     Orchestrator --> Outbound
@@ -50,22 +54,26 @@ sequenceDiagram
     participant O as Orchestrator
     participant S as SessionStore
     participant T as TranscriptStore
+    participant PI as ProviderInstance
     participant A as AgentLoop
     participant B as ContextBuilder
-    participant P as Provider
+    participant P as Provider Adapter
 
     U->>C: raw input
     C->>O: Message.Inbound
     O->>S: resolve or create session
     S-->>O: session
+    O->>PI: build provider instance
     O->>T: append Transcript.User
     O->>T: list_by_session(session_id)
     T-->>O: transcript history
-    O->>A: run(session_id, transcript, provider)
+    O->>A: run(session_id, transcript, provider_instance)
     A->>B: build_messages(transcript)
     B-->>A: system + transcript as Message.LLM[]
-    A->>P: generate(messages)
-    P-->>A: assistant content
+    A->>PI: generate(messages)
+    PI->>P: adapter.generate(messages, config)
+    P-->>PI: assistant content
+    PI-->>A: assistant content
     A-->>O: AgentLoop.Result
     O->>T: append transcript messages from result
     O-->>C: Message.Outbound
@@ -91,7 +99,9 @@ flowchart TD
 - `Channel`
   normalizes external input into `Message.Inbound` and delivers `Message.Outbound`
 - `Orchestrator`
-  resolves the session, persists transcript boundaries, and coordinates one turn
+  resolves the session, builds the provider instance, persists transcript boundaries, and coordinates one turn
+- `ProviderInstance`
+  wraps a provider adapter plus resolved config so the agent loop does not deal with setup concerns
 - `AgentLoop`
   executes one turn against the provider and returns assistant output plus transcript items
 - `ContextBuilder`

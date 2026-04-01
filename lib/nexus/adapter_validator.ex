@@ -13,7 +13,7 @@ defmodule Nexus.AdapterValidator do
   """
   @spec validate_provider(module()) :: :ok | {:error, {atom(), module()}}
   def validate_provider(module) do
-    validate_callbacks(module, [{:generate, 1}], :invalid_provider)
+    validate_callbacks(module, [{:generate, 2}], :invalid_provider)
   end
 
   @doc """

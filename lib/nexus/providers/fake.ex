@@ -12,7 +12,7 @@ defmodule Nexus.Providers.Fake do
   alias Nexus.Message
 
   @impl true
-  def generate(messages) when is_list(messages) do
+  def generate(messages, _config) when is_list(messages) do
     rendered_messages =
       messages
       |> Enum.map(&render_message/1)

@@ -49,9 +49,10 @@ flowchart LR
 2. The `Orchestrator` resolves or creates the session.
 3. The inbound user message is persisted in the transcript.
 4. The `AgentLoop` receives the current session transcript.
-5. The `ContextBuilder` turns that transcript into `Message.LLM[]`.
-6. The `Provider` generates assistant content.
-7. The `Orchestrator` persists the new transcript messages and builds `Message.Outbound`.
+5. The `Orchestrator` builds a provider instance for the turn.
+6. The `ContextBuilder` turns the transcript into `Message.LLM[]`.
+7. The provider adapter generates assistant content.
+8. The `Orchestrator` persists the new transcript messages and builds `Message.Outbound`.
 
 ## Run the Baseline
 

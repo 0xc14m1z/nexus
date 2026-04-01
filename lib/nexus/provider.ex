@@ -15,11 +15,15 @@ defmodule Nexus.Provider do
 
   alias Nexus.Message
 
+  @type config :: map()
+
   @doc """
   Generates text from a list of LLM messages.
 
   The provider does not know anything about channels or outbound runtime messages.
-  Its job is only to take structured context and return generated text.
+  Its job is only to take structured context plus already-resolved configuration
+  and return generated text.
   """
-  @callback generate(messages :: [Message.LLM.t()]) :: {:ok, String.t()} | {:error, term()}
+  @callback generate(messages :: [Message.LLM.t()], config :: config()) ::
+              {:ok, String.t()} | {:error, term()}
 end

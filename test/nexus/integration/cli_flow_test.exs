@@ -22,7 +22,9 @@ defmodule Nexus.Integration.CLIFlowTest do
     }
 
     assert {:ok, inbound} = CLI.normalize_inbound(raw_input)
-    assert {:ok, outbound} = Orchestrator.run(inbound, Fake, InMemory, InMemoryTranscriptStore)
+
+    assert {:ok, outbound} =
+             Orchestrator.run(inbound, {Fake, %{}}, InMemory, InMemoryTranscriptStore)
 
     output =
       capture_io(fn ->

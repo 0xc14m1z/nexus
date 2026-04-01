@@ -4,31 +4,16 @@ defmodule Nexus.Providers.AnthropicTest do
   alias Nexus.Message
   alias Nexus.Providers.Anthropic
 
-  setup do
-    previous_config = Application.get_env(:nexus, Anthropic, [])
-    Application.delete_env(:nexus, Anthropic)
-
-    on_exit(fn ->
-      if previous_config == [] do
-        Application.delete_env(:nexus, Anthropic)
-      else
-        Application.put_env(:nexus, Anthropic, previous_config)
-      end
-    end)
-
-    :ok
-  end
-
-  test "generate/1 returns an error when the api key is missing" do
+  test "generate/2 returns an error when the api key is missing" do
     messages = [
       %Message.LLM{role: :system, content: "You are Nexus."},
       %Message.LLM{role: :user, content: "hello"}
     ]
 
-    assert {:error, :missing_anthropic_api_key} = Anthropic.generate(messages)
+    assert {:error, :missing_anthropic_api_key} = Anthropic.generate(messages, %{})
   end
 
-  test "generate/1 maps Nexus messages to an Anthropic request and returns text content" do
+  test "generate/2 maps Nexus messages to an Anthropic request and returns text content" do
     parent = self()
 
     request_fun = fn opts ->
@@ -45,13 +30,13 @@ defmodule Nexus.Providers.AnthropicTest do
        }}
     end
 
-    Application.put_env(:nexus, Anthropic,
+    config = %{
       api_key: "test-key",
       model: "claude-sonnet-4-20250514",
       max_tokens: 256,
       base_url: "https://example.test",
       request_fun: request_fun
-    )
+    }
 
     messages = [
       %Message.LLM{role: :system, content: "System one."},
@@ -61,7 +46,7 @@ defmodule Nexus.Providers.AnthropicTest do
       %Message.LLM{role: :user, content: "continue"}
     ]
 
-    assert {:ok, "hello from anthropic"} = Anthropic.generate(messages)
+    assert {:ok, "hello from anthropic"} = Anthropic.generate(messages, config)
 
     assert_received {:request_opts, opts}
 

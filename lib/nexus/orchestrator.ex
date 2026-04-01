@@ -14,16 +14,18 @@ defmodule Nexus.Orchestrator do
   alias Nexus.AgentLoop
   alias Nexus.AdapterValidator
   alias Nexus.Message
+  alias Nexus.ProviderInstance
   alias Nexus.Session
 
   @doc """
   Resolves or creates the session for an inbound message and executes one agent turn.
   """
-  @spec run(Message.Inbound.t(), module(), module(), module()) ::
+  @spec run(Message.Inbound.t(), {module(), Nexus.Provider.config()}, module(), module()) ::
           {:ok, Message.Outbound.t()} | {:error, term()}
   def run(%Message.Inbound{} = inbound, provider, session_store, transcript_store) do
     with :ok <- AdapterValidator.validate_session_store(session_store),
          :ok <- AdapterValidator.validate_transcript_store(transcript_store),
+         {:ok, provider} <- build_provider(provider),
          {:ok, session} <- resolve_session(inbound.session_id, session_store) do
       inbound = Map.put(inbound, :session_id, session.id)
 
@@ -40,6 +42,14 @@ defmodule Nexus.Orchestrator do
          }}
       end
     end
+  end
+
+  defp build_provider({adapter, config}) when is_map(config) do
+    ProviderInstance.new(adapter, config)
+  end
+
+  defp build_provider(provider) do
+    {:error, {:invalid_provider_reference, provider}}
   end
 
   defp resolve_session(nil, session_store) do

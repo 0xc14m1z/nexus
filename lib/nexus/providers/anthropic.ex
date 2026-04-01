@@ -9,12 +9,8 @@ defmodule Nexus.Providers.Anthropic do
   - it maps Nexus system messages to Anthropic's top-level `system` field
   - it returns only the concatenated assistant text
 
-  Configuration is read from application env first, then from environment variables:
-
-  - `:api_key` or `ANTHROPIC_API_KEY`
-  - `:model` or `ANTHROPIC_MODEL`
-  - `:max_tokens` or `ANTHROPIC_MAX_TOKENS`
-  - `:base_url` or `ANTHROPIC_BASE_URL`
+  All configuration must be passed in from the outside. This keeps environment
+  lookup and application bootstrapping out of the provider adapter itself.
   """
 
   @behaviour Nexus.Provider
@@ -27,17 +23,17 @@ defmodule Nexus.Providers.Anthropic do
   @anthropic_version "2023-06-01"
 
   @impl true
-  def generate(messages) when is_list(messages) do
-    with {:ok, api_key} <- fetch_api_key(),
-         {:ok, body} <- build_request_body(messages),
-         {:ok, response} <- post_messages(body, api_key),
+  def generate(messages, config) when is_list(messages) and is_map(config) do
+    with {:ok, api_key} <- fetch_api_key(config),
+         {:ok, body} <- build_request_body(messages, config),
+         {:ok, response} <- post_messages(body, api_key, config),
          {:ok, generated_text} <- extract_text(response.body) do
       {:ok, generated_text}
     end
   end
 
-  defp fetch_api_key do
-    case config(:api_key) || System.get_env("ANTHROPIC_API_KEY") do
+  defp fetch_api_key(config) do
+    case Map.get(config, :api_key) do
       api_key when is_binary(api_key) and api_key != "" -> {:ok, api_key}
       _missing -> {:error, :missing_anthropic_api_key}
     end
@@ -45,13 +41,13 @@ defmodule Nexus.Providers.Anthropic do
 
   # Anthropic accepts a single initial system prompt, so multiple Nexus system
   # messages are concatenated before sending the request.
-  defp build_request_body(messages) do
+  defp build_request_body(messages, config) do
     {system_messages, conversation_messages} =
       Enum.split_with(messages, &(&1.role == :system))
 
     body = %{
-      "model" => config(:model) || System.get_env("ANTHROPIC_MODEL") || @default_model,
-      "max_tokens" => max_tokens(),
+      "model" => Map.get(config, :model, @default_model),
+      "max_tokens" => max_tokens(config),
       "messages" => Enum.map(conversation_messages, &message_to_payload/1)
     }
 
@@ -76,9 +72,9 @@ defmodule Nexus.Providers.Anthropic do
     }
   end
 
-  defp post_messages(body, api_key) do
-    request_fun().(
-      url: base_url() <> "/v1/messages",
+  defp post_messages(body, api_key, config) do
+    request_fun(config).(
+      url: base_url(config) <> "/v1/messages",
       headers: [
         {"x-api-key", api_key},
         {"anthropic-version", @anthropic_version},
@@ -117,25 +113,15 @@ defmodule Nexus.Providers.Anthropic do
     {:error, :invalid_anthropic_response}
   end
 
-  defp max_tokens do
-    case config(:max_tokens) || System.get_env("ANTHROPIC_MAX_TOKENS") do
-      nil -> @default_max_tokens
-      value when is_integer(value) -> value
-      value when is_binary(value) -> String.to_integer(value)
-    end
+  defp max_tokens(config) do
+    Map.get(config, :max_tokens, @default_max_tokens)
   end
 
-  defp base_url do
-    config(:base_url) || System.get_env("ANTHROPIC_BASE_URL") || @default_base_url
+  defp base_url(config) do
+    Map.get(config, :base_url, @default_base_url)
   end
 
-  defp request_fun do
-    config(:request_fun) || (&Req.post/1)
-  end
-
-  defp config(key) do
-    :nexus
-    |> Application.get_env(__MODULE__, [])
-    |> Keyword.get(key)
+  defp request_fun(config) do
+    Map.get(config, :request_fun, &Req.post/1)
   end
 end
