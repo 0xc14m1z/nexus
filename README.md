@@ -33,23 +33,26 @@ The repository currently includes:
 ```mermaid
 flowchart LR
     User --> CLI[CLI Channel]
-    CLI --> Orchestrator
+    CLI --> NexusRun[Nexus.run/3]
+    NexusRun --> Orchestrator
     Orchestrator --> SessionStore
     Orchestrator --> TranscriptStore
+    NexusRun --> ProviderInstance
     Orchestrator --> AgentLoop
     AgentLoop --> ContextBuilder
     ContextBuilder --> Provider
     AgentLoop --> Orchestrator
-    Orchestrator --> CLI
+    Orchestrator --> NexusRun
+    NexusRun --> CLI
 ```
 
 ## How One Turn Works
 
 1. A channel normalizes external input into `Message.Inbound`.
-2. The `Orchestrator` resolves or creates the session.
-3. The inbound user message is persisted in the transcript.
-4. The `AgentLoop` receives the current session transcript.
-5. The `Orchestrator` builds a provider instance for the turn.
+2. `Nexus.run/3` builds a `ProviderInstance` from runtime configuration.
+3. The `Orchestrator` resolves or creates the session.
+4. The inbound user message is persisted in the transcript.
+5. The `AgentLoop` receives the current session transcript.
 6. The `ContextBuilder` turns the transcript into `Message.LLM[]`.
 7. The provider adapter generates assistant content.
 8. The `Orchestrator` persists the new transcript messages and builds `Message.Outbound`.
@@ -82,10 +85,11 @@ The working architecture and plan live in:
 If you want to understand the runtime step by step, read these in order:
 
 1. `docs/architecture-diagrams.md`
-2. `lib/nexus/orchestrator.ex`
-3. `lib/nexus/agent_loop.ex`
-4. `lib/nexus/context_builder.ex`
-5. `lib/nexus/provider.ex`
+2. `lib/nexus.ex`
+3. `lib/nexus/orchestrator.ex`
+4. `lib/nexus/agent_loop.ex`
+5. `lib/nexus/context_builder.ex`
+6. `lib/nexus/provider.ex`
 
 ## Near-Term Goal
 

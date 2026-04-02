@@ -11,6 +11,7 @@ current structure and flow can be inspected quickly before reading code.
 flowchart LR
     User[User]
     CLI[CLI Channel]
+    Runtime[Nexus.run/3]
     Inbound[Message.Inbound]
     Orchestrator[Orchestrator]
     SessionStore[SessionStore]
@@ -26,10 +27,11 @@ flowchart LR
 
     User --> CLI
     CLI --> Inbound
-    Inbound --> Orchestrator
+    Inbound --> Runtime
+    Runtime --> ProviderInstance
+    Runtime --> Orchestrator
     Orchestrator --> SessionStore
     Orchestrator --> TranscriptStore
-    Orchestrator --> ProviderInstance
     ProviderInstance --> Provider
     Orchestrator --> AgentLoop
     TranscriptStore --> AgentLoop
@@ -51,6 +53,7 @@ flowchart LR
 sequenceDiagram
     participant U as User
     participant C as CLI Channel
+    participant R as Nexus.run/3
     participant O as Orchestrator
     participant S as SessionStore
     participant T as TranscriptStore
@@ -60,10 +63,11 @@ sequenceDiagram
     participant P as Provider Adapter
 
     U->>C: raw input
-    C->>O: Message.Inbound
+    C->>R: Message.Inbound
+    R->>PI: build provider instance from runtime config
+    R->>O: run(inbound, provider_instance, ...)
     O->>S: resolve or create session
     S-->>O: session
-    O->>PI: build provider instance
     O->>T: append Transcript.User
     O->>T: list_by_session(session_id)
     T-->>O: transcript history
@@ -99,7 +103,9 @@ flowchart TD
 - `Channel`
   normalizes external input into `Message.Inbound` and delivers `Message.Outbound`
 - `Orchestrator`
-  resolves the session, builds the provider instance, persists transcript boundaries, and coordinates one turn
+  resolves the session, persists transcript boundaries, and coordinates one turn
+- `Nexus.run/3`
+  reads runtime config, builds the provider instance, and delegates to the orchestrator
 - `ProviderInstance`
   wraps a provider adapter plus resolved config so the agent loop does not deal with setup concerns
 - `AgentLoop`

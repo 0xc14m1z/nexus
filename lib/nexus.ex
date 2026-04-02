@@ -1,18 +1,20 @@
 defmodule Nexus do
   @moduledoc """
-  Documentation for `Nexus`.
+  High-level runtime entrypoint for Nexus.
   """
+
+  alias Nexus.Message
+  alias Nexus.Orchestrator
+  alias Nexus.RuntimeConfig
 
   @doc """
-  Hello world.
-
-  ## Examples
-
-      iex> Nexus.hello()
-      :world
-
+  Runs one turn using the provider declared in runtime configuration.
   """
-  def hello do
-    :world
+  @spec run(Message.Inbound.t(), module(), module()) ::
+          {:ok, Message.Outbound.t()} | {:error, term()}
+  def run(%Message.Inbound{} = inbound, session_store, transcript_store) do
+    with {:ok, provider} <- RuntimeConfig.provider_instance() do
+      Orchestrator.run(inbound, provider, session_store, transcript_store)
+    end
   end
 end
