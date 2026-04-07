@@ -1,11 +1,12 @@
-defmodule Mix.Tasks.Nexus.Chat do
+defmodule Mix.Tasks.Nexus.Cli do
   @moduledoc """
-  Runs one Nexus turn from the terminal.
+  Runs Nexus from the terminal.
 
   Examples:
 
-      mix nexus.chat "hello nexus"
-      mix nexus.chat --session-id session_123 "continue"
+      mix nexus.cli "hello nexus"
+      mix nexus.cli --session-id session_123 "continue"
+      mix nexus.cli
   """
 
   use Mix.Task
@@ -14,7 +15,7 @@ defmodule Mix.Tasks.Nexus.Chat do
   alias Nexus.SessionStores.InMemory
   alias Nexus.TranscriptStores.InMemory, as: InMemoryTranscriptStore
 
-  @shortdoc "Runs one Nexus chat turn from the terminal"
+  @shortdoc "Runs Nexus from the terminal"
 
   @impl true
   def run(args) do
@@ -27,10 +28,13 @@ defmodule Mix.Tasks.Nexus.Chat do
       )
 
     case {invalid, remaining} do
-      {[], [content]} ->
+      {[], []} ->
+        CLI.run_interactive(InMemory, InMemoryTranscriptStore)
+
+      {[], [user_input]} ->
         raw_input = %{
           session_id: Keyword.get(opts, :session_id),
-          content: content
+          user_input: user_input
         }
 
         case CLI.run_once(raw_input, InMemory, InMemoryTranscriptStore) do
@@ -38,13 +42,14 @@ defmodule Mix.Tasks.Nexus.Chat do
             Mix.shell().info("session_id=#{outbound.session_id}")
 
           {:error, reason} ->
-            Mix.raise("nexus.chat failed: #{inspect(reason)}")
+            Mix.raise("nexus.cli failed: #{inspect(reason)}")
         end
 
       _ ->
         Mix.raise("""
         usage:
-          mix nexus.chat [--session-id session_123] "message text"
+          mix nexus.cli [--session-id session_123] "message text"
+          mix nexus.cli
         """)
     end
   end

@@ -32,8 +32,10 @@ defmodule Nexus.Providers.Anthropic do
     end
   end
 
+  # Runtime configuration may come from JSON, so we accept either atom keys or
+  # string keys when retrieving the API key.
   defp fetch_api_key(config) do
-    case Map.get(config, :api_key) do
+    case config_get(config, :api_key) do
       api_key when is_binary(api_key) and api_key != "" -> {:ok, api_key}
       _missing -> {:error, :missing_anthropic_api_key}
     end
@@ -46,7 +48,7 @@ defmodule Nexus.Providers.Anthropic do
       Enum.split_with(messages, &(&1.role == :system))
 
     body = %{
-      "model" => Map.get(config, :model, @default_model),
+      "model" => config_get(config, :model, @default_model),
       "max_tokens" => max_tokens(config),
       "messages" => Enum.map(conversation_messages, &message_to_payload/1)
     }
@@ -59,12 +61,16 @@ defmodule Nexus.Providers.Anthropic do
 
   defp build_system_prompt([]), do: nil
 
+  # Multiple internal system messages are flattened into one string because
+  # Anthropic exposes a single top-level `system` field.
   defp build_system_prompt(system_messages) do
     system_messages
     |> Enum.map(& &1.content)
     |> Enum.join("\n\n")
   end
 
+  # Conversation messages stay close to Anthropic's wire format, so the
+  # adapter mostly performs key conversion here.
   defp message_to_payload(%Message.LLM{role: role, content: content}) do
     %{
       "role" => Atom.to_string(role),
@@ -72,6 +78,8 @@ defmodule Nexus.Providers.Anthropic do
     }
   end
 
+  # Request execution is isolated behind `request_fun/1` so tests can replace
+  # the HTTP client without mocking global state.
   defp post_messages(body, api_key, config) do
     request_fun(config).(
       url: base_url(config) <> "/v1/messages",
@@ -113,15 +121,23 @@ defmodule Nexus.Providers.Anthropic do
     {:error, :invalid_anthropic_response}
   end
 
+  # These small accessors keep defaults in one place and hide the atom/string
+  # key normalization done by `config_get/3`.
   defp max_tokens(config) do
-    Map.get(config, :max_tokens, @default_max_tokens)
+    config_get(config, :max_tokens, @default_max_tokens)
   end
 
   defp base_url(config) do
-    Map.get(config, :base_url, @default_base_url)
+    config_get(config, :base_url, @default_base_url)
   end
 
   defp request_fun(config) do
-    Map.get(config, :request_fun, &Req.post/1)
+    config_get(config, :request_fun, &Req.post/1)
+  end
+
+  # JSON-loaded config uses string keys, while tests and code often use atom
+  # keys, so we accept both representations transparently.
+  defp config_get(config, key, default \\ nil) when is_map(config) and is_atom(key) do
+    Map.get(config, key, Map.get(config, Atom.to_string(key), default))
   end
 end

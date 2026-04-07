@@ -1,0 +1,10 @@
+{
+  "provider": {
+    "adapter": "Nexus.Providers.Anthropic",
+    "config": {
+      "api_key": "replace-me",
+      "model": "claude-sonnet-4-20250514",
+      "max_tokens": 1024
+    }
+  }
+}

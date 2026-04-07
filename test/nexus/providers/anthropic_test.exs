@@ -65,4 +65,31 @@ defmodule Nexus.Providers.AnthropicTest do
              ]
            }
   end
+
+  test "generate/2 accepts config loaded from JSON with string keys" do
+    request_fun = fn _opts ->
+      {:ok,
+       %Req.Response{
+         status: 200,
+         body: %{
+           "content" => [
+             %{"type" => "text", "text" => "hello from string config"}
+           ]
+         }
+       }}
+    end
+
+    messages = [
+      %Message.LLM{role: :system, content: "You are Nexus."},
+      %Message.LLM{role: :user, content: "hello"}
+    ]
+
+    assert {:ok, "hello from string config"} =
+             Anthropic.generate(messages, %{
+               "api_key" => "test-key",
+               "model" => "claude-sonnet-4-20250514",
+               "max_tokens" => 128,
+               request_fun: request_fun
+             })
+  end
 end

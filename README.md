@@ -66,9 +66,33 @@ Use these commands from the project root:
 
 ```bash
 mix test
+mix nexus.cli
+mix nexus.cli "hello nexus"
 mix run -e 'Application.ensure_all_started(:nexus) |> IO.inspect()'
 iex -S mix
 ```
+
+`mix nexus.cli` starts a tiny interactive loop in the current VM, so the
+in-memory session and transcript stores can keep state across multiple turns.
+
+To use a real provider without editing Elixir config files, create a local JSON
+runtime config at `config/nexus.local.json`. Example:
+
+```json
+{
+  "provider": {
+    "adapter": "Nexus.Providers.Anthropic",
+    "config": {
+      "api_key": "replace-me",
+      "model": "claude-sonnet-4-20250514",
+      "max_tokens": 1024
+    }
+  }
+}
+```
+
+`Nexus` will read `config/nexus.local.json` first, then `config/nexus.json`,
+and only fall back to application config if no JSON config file is present.
 
 ## Project Docs
 

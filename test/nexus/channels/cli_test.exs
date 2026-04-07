@@ -9,7 +9,7 @@ defmodule Nexus.Channels.CLITest do
   test "normalize_inbound/1 builds an inbound message from valid CLI input" do
     raw = %{
       session_id: "session_123",
-      content: "hello from the terminal",
+      user_input: "hello from the terminal",
       metadata: %{source: :test}
     }
 
@@ -23,7 +23,8 @@ defmodule Nexus.Channels.CLITest do
   end
 
   test "normalize_inbound/1 returns an error for invalid input" do
-    assert {:error, :invalid_cli_input} = CLI.normalize_inbound(%{content: "missing session id"})
+    assert {:error, :invalid_cli_input} =
+             CLI.normalize_inbound(%{user_input: "missing session id"})
   end
 
   test "deliver/1 prints outbound content to stdout" do

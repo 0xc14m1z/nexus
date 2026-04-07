@@ -29,7 +29,7 @@ defmodule Nexus.Integration.CLIFlowTest do
   test "a CLI payload can flow through Nexus.CLI and delivery" do
     raw_input = %{
       session_id: nil,
-      content: "hello nexus"
+      user_input: "hello nexus"
     }
 
     output =
@@ -40,5 +40,19 @@ defmodule Nexus.Integration.CLIFlowTest do
 
     assert output ==
              "Fake response: System:\nYou are Nexus.\nHelp the user understand and build the agent framework step by step.\n\nUser:\nhello nexus\n"
+  end
+
+  test "interactive CLI keeps the session alive across turns in the same VM" do
+    output =
+      capture_io("hello nexus\ncontinue\n/exit\n", fn ->
+        assert :ok = CLI.run_interactive(InMemory, InMemoryTranscriptStore)
+      end)
+
+    assert output =~ "Nexus interactive chat"
+    assert output =~ "Commands: /new, /exit"
+    assert output =~ "session_id=session_"
+    assert output =~ "hello nexus"
+    assert output =~ "continue"
+    assert output =~ "bye"
   end
 end
