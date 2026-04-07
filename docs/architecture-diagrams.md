@@ -11,9 +11,11 @@ current structure and flow can be inspected quickly before reading code.
 flowchart LR
     User[User]
     CLI[CLI Channel]
-    Runtime[Nexus.run/3]
+    Runtime[Nexus.run/1]
     Inbound[Message.Inbound]
     Orchestrator[Orchestrator]
+    SessionStoreInstance[SessionStoreInstance]
+    TranscriptStoreInstance[TranscriptStoreInstance]
     SessionStore[SessionStore]
     TranscriptStore[TranscriptStore]
     ProviderInstance[ProviderInstance]
@@ -28,10 +30,14 @@ flowchart LR
     User --> CLI
     CLI --> Inbound
     Inbound --> Runtime
+    Runtime --> SessionStoreInstance
+    Runtime --> TranscriptStoreInstance
     Runtime --> ProviderInstance
     Runtime --> Orchestrator
-    Orchestrator --> SessionStore
-    Orchestrator --> TranscriptStore
+    Orchestrator --> SessionStoreInstance
+    Orchestrator --> TranscriptStoreInstance
+    SessionStoreInstance --> SessionStore
+    TranscriptStoreInstance --> TranscriptStore
     ProviderInstance --> Provider
     Orchestrator --> AgentLoop
     TranscriptStore --> AgentLoop
@@ -53,8 +59,10 @@ flowchart LR
 sequenceDiagram
     participant U as User
     participant C as CLI Channel
-    participant R as Nexus.run/3
+    participant R as Nexus.run/1
     participant O as Orchestrator
+    participant SSI as SessionStoreInstance
+    participant TSI as TranscriptStoreInstance
     participant S as SessionStore
     participant T as TranscriptStore
     participant PI as ProviderInstance
@@ -65,11 +73,16 @@ sequenceDiagram
     U->>C: raw input
     C->>R: Message.Inbound
     R->>PI: build provider instance from runtime config
-    R->>O: run(inbound, provider_instance, ...)
-    O->>S: resolve or create session
+    R->>SSI: build session store instance
+    R->>TSI: build transcript store instance
+    R->>O: run(inbound, provider_instance, session_store_instance, transcript_store_instance)
+    O->>SSI: get/save session
+    SSI->>S: delegate
     S-->>O: session
-    O->>T: append Transcript.User
-    O->>T: list_by_session(session_id)
+    O->>TSI: append Transcript.User
+    TSI->>T: delegate
+    O->>TSI: list_by_session(session_id)
+    TSI->>T: delegate
     T-->>O: transcript history
     O->>A: run(session_id, transcript, provider_instance)
     A->>B: build_messages(transcript)
@@ -79,7 +92,8 @@ sequenceDiagram
     P-->>PI: assistant content
     PI-->>A: assistant content
     A-->>O: AgentLoop.Result
-    O->>T: append transcript messages from result
+    O->>TSI: append transcript messages from result
+    TSI->>T: delegate
     O-->>C: Message.Outbound
     C-->>U: rendered output
 ```
@@ -104,10 +118,14 @@ flowchart TD
   normalizes external input into `Message.Inbound` and delivers `Message.Outbound`
 - `Orchestrator`
   resolves the session, persists transcript boundaries, and coordinates one turn
-- `Nexus.run/3`
-  reads runtime config, builds the provider instance, and delegates to the orchestrator
+- `Nexus.run/1`
+  reads runtime config, builds provider/session/transcript store instances, and delegates to the orchestrator
 - `ProviderInstance`
   wraps a provider adapter plus resolved config so the agent loop does not deal with setup concerns
+- `SessionStoreInstance`
+  wraps a session store adapter plus resolved config so the orchestrator does not know storage setup details
+- `TranscriptStoreInstance`
+  wraps a transcript store adapter plus resolved config so the orchestrator can persist transcript entries uniformly
 - `AgentLoop`
   executes one turn against the provider and returns assistant output plus transcript items
 - `ContextBuilder`
@@ -133,6 +151,7 @@ flowchart TD
 
 The next planned implementation step is:
 
-- add a tiny manual smoke path for the Anthropic adapter and run the first real LLM test
+- add file-backed session and transcript stores and wire them through runtime config
 
-The adapter exists now; the next step is making it easy to exercise from the terminal.
+That will make `mix nexus.cli "..."` reusable across separate command invocations,
+not only inside one long-lived interactive session.

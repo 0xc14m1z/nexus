@@ -33,11 +33,13 @@ The repository currently includes:
 ```mermaid
 flowchart LR
     User --> CLI[CLI Channel]
-    CLI --> NexusRun[Nexus.run/3]
+    CLI --> NexusRun[Nexus.run/1]
     NexusRun --> Orchestrator
+    NexusRun --> SessionStoreInstance
+    NexusRun --> TranscriptStoreInstance
+    NexusRun --> ProviderInstance
     Orchestrator --> SessionStore
     Orchestrator --> TranscriptStore
-    NexusRun --> ProviderInstance
     Orchestrator --> AgentLoop
     AgentLoop --> ContextBuilder
     ContextBuilder --> Provider
@@ -49,7 +51,7 @@ flowchart LR
 ## How One Turn Works
 
 1. A channel normalizes external input into `Message.Inbound`.
-2. `Nexus.run/3` builds a `ProviderInstance` from runtime configuration.
+2. `Nexus.run/1` resolves `ProviderInstance`, `SessionStoreInstance`, and `TranscriptStoreInstance` from runtime configuration.
 3. The `Orchestrator` resolves or creates the session.
 4. The inbound user message is persisted in the transcript.
 5. The `AgentLoop` receives the current session transcript.
@@ -87,6 +89,14 @@ runtime config at `config/nexus.local.json`. Example:
       "model": "claude-sonnet-4-20250514",
       "max_tokens": 1024
     }
+  },
+  "session_store": {
+    "adapter": "Nexus.SessionStores.InMemory",
+    "config": {}
+  },
+  "transcript_store": {
+    "adapter": "Nexus.TranscriptStores.InMemory",
+    "config": {}
   }
 }
 ```

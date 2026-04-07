@@ -3,23 +3,29 @@ defmodule Nexus.OrchestratorTest do
 
   alias Nexus.Message
   alias Nexus.ProviderInstance
-  alias Nexus.TranscriptStores.InMemory, as: InMemoryTranscriptStore
   alias Nexus.Orchestrator
   alias Nexus.Providers.Fake
   alias Nexus.Session
+  alias Nexus.SessionStoreInstance
   alias Nexus.SessionStores.InMemory
+  alias Nexus.TranscriptStoreInstance
+  alias Nexus.TranscriptStores.InMemory, as: InMemoryTranscriptStore
 
   setup do
     InMemory.clear()
     InMemoryTranscriptStore.clear()
 
     {:ok, provider} = ProviderInstance.new(Fake, %{})
+    {:ok, session_store} = SessionStoreInstance.new(InMemory, %{})
+    {:ok, transcript_store} = TranscriptStoreInstance.new(InMemoryTranscriptStore, %{})
 
-    {:ok, provider: provider}
+    {:ok, provider: provider, session_store: session_store, transcript_store: transcript_store}
   end
 
   test "run/4 creates a session through the store when the inbound message has no session id", %{
-    provider: provider
+    provider: provider,
+    session_store: session_store,
+    transcript_store: transcript_store
   } do
     inbound = %Message.Inbound{
       session_id: nil,
@@ -29,14 +35,18 @@ defmodule Nexus.OrchestratorTest do
     }
 
     assert {:ok, outbound} =
-             Orchestrator.run(inbound, provider, InMemory, InMemoryTranscriptStore)
+             Orchestrator.run(inbound, provider, session_store, transcript_store)
 
     assert is_binary(outbound.session_id)
     assert {:ok, %Session{id: id}} = InMemory.get(outbound.session_id)
     assert id == outbound.session_id
   end
 
-  test "run/4 reuses an existing session from the store", %{provider: provider} do
+  test "run/4 reuses an existing session from the store", %{
+    provider: provider,
+    session_store: session_store,
+    transcript_store: transcript_store
+  } do
     assert {:ok, %Session{id: session_id}} = InMemory.save(%Session{})
 
     inbound = %Message.Inbound{
@@ -47,12 +57,16 @@ defmodule Nexus.OrchestratorTest do
     }
 
     assert {:ok, outbound} =
-             Orchestrator.run(inbound, provider, InMemory, InMemoryTranscriptStore)
+             Orchestrator.run(inbound, provider, session_store, transcript_store)
 
     assert outbound.session_id == session_id
   end
 
-  test "run/4 persists the user and assistant transcript messages", %{provider: provider} do
+  test "run/4 persists the user and assistant transcript messages", %{
+    provider: provider,
+    session_store: session_store,
+    transcript_store: transcript_store
+  } do
     inbound = %Message.Inbound{
       session_id: nil,
       channel: :cli,
@@ -61,7 +75,7 @@ defmodule Nexus.OrchestratorTest do
     }
 
     assert {:ok, outbound} =
-             Orchestrator.run(inbound, provider, InMemory, InMemoryTranscriptStore)
+             Orchestrator.run(inbound, provider, session_store, transcript_store)
 
     assert {:ok, messages} = InMemoryTranscriptStore.list_by_session(outbound.session_id)
 
@@ -74,7 +88,11 @@ defmodule Nexus.OrchestratorTest do
            ] = messages
   end
 
-  test "run/4 builds the next turn from the existing session transcript", %{provider: provider} do
+  test "run/4 builds the next turn from the existing session transcript", %{
+    provider: provider,
+    session_store: session_store,
+    transcript_store: transcript_store
+  } do
     first_inbound = %Message.Inbound{
       session_id: nil,
       channel: :cli,
@@ -83,7 +101,7 @@ defmodule Nexus.OrchestratorTest do
     }
 
     assert {:ok, first_outbound} =
-             Orchestrator.run(first_inbound, provider, InMemory, InMemoryTranscriptStore)
+             Orchestrator.run(first_inbound, provider, session_store, transcript_store)
 
     second_inbound = %Message.Inbound{
       session_id: first_outbound.session_id,
@@ -93,14 +111,18 @@ defmodule Nexus.OrchestratorTest do
     }
 
     assert {:ok, second_outbound} =
-             Orchestrator.run(second_inbound, provider, InMemory, InMemoryTranscriptStore)
+             Orchestrator.run(second_inbound, provider, session_store, transcript_store)
 
     assert second_outbound.content =~ "User:\nhello nexus"
     assert second_outbound.content =~ "Assistant:\nFake response: System:"
     assert second_outbound.content =~ "User:\ncontinue"
   end
 
-  test "run/4 returns an error when the requested session does not exist", %{provider: provider} do
+  test "run/4 returns an error when the requested session does not exist", %{
+    provider: provider,
+    session_store: session_store,
+    transcript_store: transcript_store
+  } do
     inbound = %Message.Inbound{
       session_id: "session_missing",
       channel: :cli,
@@ -109,7 +131,7 @@ defmodule Nexus.OrchestratorTest do
     }
 
     assert {:error, :session_not_found} =
-             Orchestrator.run(inbound, provider, InMemory, InMemoryTranscriptStore)
+             Orchestrator.run(inbound, provider, session_store, transcript_store)
   end
 
   test "run/4 returns an invalid provider reference error when the provider is not a provider instance" do
@@ -121,10 +143,10 @@ defmodule Nexus.OrchestratorTest do
     }
 
     assert {:error, {:invalid_provider_reference, Fake}} =
-             Orchestrator.run(inbound, Fake, InMemory, InMemoryTranscriptStore)
+             Orchestrator.run(inbound, Fake, :invalid, :invalid)
   end
 
-  test "run/4 returns an invalid session store error for a module that is not a session store" do
+  test "run/4 returns an invalid session store error for a value that is not a session store instance" do
     inbound = %Message.Inbound{
       session_id: nil,
       channel: :cli,
@@ -133,12 +155,13 @@ defmodule Nexus.OrchestratorTest do
     }
 
     {:ok, provider} = ProviderInstance.new(Fake, %{})
+    {:ok, transcript_store} = TranscriptStoreInstance.new(InMemoryTranscriptStore, %{})
 
-    assert {:error, {:invalid_session_store, String}} =
-             Orchestrator.run(inbound, provider, String, InMemoryTranscriptStore)
+    assert {:error, {:invalid_session_store_reference, String}} =
+             Orchestrator.run(inbound, provider, String, transcript_store)
   end
 
-  test "run/4 returns an invalid transcript store error for a module that is not a transcript store" do
+  test "run/4 returns an invalid transcript store error for a value that is not a transcript store instance" do
     inbound = %Message.Inbound{
       session_id: nil,
       channel: :cli,
@@ -147,8 +170,9 @@ defmodule Nexus.OrchestratorTest do
     }
 
     {:ok, provider} = ProviderInstance.new(Fake, %{})
+    {:ok, session_store} = SessionStoreInstance.new(InMemory, %{})
 
-    assert {:error, {:invalid_transcript_store, String}} =
-             Orchestrator.run(inbound, provider, InMemory, String)
+    assert {:error, {:invalid_transcript_store_reference, String}} =
+             Orchestrator.run(inbound, provider, session_store, String)
   end
 end

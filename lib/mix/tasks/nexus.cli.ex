@@ -12,8 +12,6 @@ defmodule Mix.Tasks.Nexus.Cli do
   use Mix.Task
 
   alias Nexus.CLI
-  alias Nexus.SessionStores.InMemory
-  alias Nexus.TranscriptStores.InMemory, as: InMemoryTranscriptStore
 
   @shortdoc "Runs Nexus from the terminal"
 
@@ -29,7 +27,7 @@ defmodule Mix.Tasks.Nexus.Cli do
 
     case {invalid, remaining} do
       {[], []} ->
-        CLI.run_interactive(InMemory, InMemoryTranscriptStore)
+        CLI.run_interactive()
 
       {[], [user_input]} ->
         raw_input = %{
@@ -37,7 +35,7 @@ defmodule Mix.Tasks.Nexus.Cli do
           user_input: user_input
         }
 
-        case CLI.run_once(raw_input, InMemory, InMemoryTranscriptStore) do
+        case CLI.run_once(raw_input) do
           {:ok, outbound} ->
             Mix.shell().info("session_id=#{outbound.session_id}")
 

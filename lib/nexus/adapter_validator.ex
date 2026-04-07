@@ -21,7 +21,7 @@ defmodule Nexus.AdapterValidator do
   """
   @spec validate_session_store(module()) :: :ok | {:error, {atom(), module()}}
   def validate_session_store(module) do
-    validate_callbacks(module, [{:get, 1}, {:save, 1}], :invalid_session_store)
+    validate_callbacks(module, [{:get, 2}, {:save, 2}], :invalid_session_store)
   end
 
   @doc """
@@ -37,7 +37,7 @@ defmodule Nexus.AdapterValidator do
   """
   @spec validate_transcript_store(module()) :: :ok | {:error, {atom(), module()}}
   def validate_transcript_store(module) do
-    validate_callbacks(module, [{:append, 1}, {:list_by_session, 1}], :invalid_transcript_store)
+    validate_callbacks(module, [{:append, 2}, {:list_by_session, 2}], :invalid_transcript_store)
   end
 
   defp validate_callbacks(module, callbacks, error_tag)

@@ -12,29 +12,34 @@ defmodule Nexus.Orchestrator do
   """
 
   alias Nexus.AgentLoop
-  alias Nexus.AdapterValidator
   alias Nexus.Message
-  alias Nexus.Session
   alias Nexus.ProviderInstance
+  alias Nexus.Session
+  alias Nexus.SessionStoreInstance
+  alias Nexus.TranscriptStoreInstance
 
   @doc """
   Resolves or creates the session for an inbound message and executes one agent turn.
   """
-  @spec run(Message.Inbound.t(), ProviderInstance.t(), module(), module()) ::
+  @spec run(
+          Message.Inbound.t(),
+          ProviderInstance.t(),
+          SessionStoreInstance.t(),
+          TranscriptStoreInstance.t()
+        ) ::
           {:ok, Message.Outbound.t()} | {:error, term()}
   def run(
         %Message.Inbound{} = inbound,
         %ProviderInstance{} = provider,
-        session_store,
-        transcript_store
+        %SessionStoreInstance{} = session_store,
+        %TranscriptStoreInstance{} = transcript_store
       ) do
-    with :ok <- AdapterValidator.validate_session_store(session_store),
-         :ok <- AdapterValidator.validate_transcript_store(transcript_store),
-         {:ok, session} <- resolve_session(inbound.session_id, session_store) do
+    with {:ok, session} <- resolve_session(inbound.session_id, session_store) do
       inbound = Map.put(inbound, :session_id, session.id)
 
       with {:ok, _message} <- append_user_message(inbound, transcript_store),
-           {:ok, transcript_messages} <- transcript_store.list_by_session(session.id),
+           {:ok, transcript_messages} <-
+             TranscriptStoreInstance.list_by_session(transcript_store, session.id),
            {:ok, result} <- AgentLoop.run(session.id, transcript_messages, provider),
            :ok <- append_transcript_messages(result.transcript_messages, transcript_store) do
         {:ok,
@@ -48,18 +53,27 @@ defmodule Nexus.Orchestrator do
     end
   end
 
-  def run(%Message.Inbound{}, provider, _session_store, _transcript_store) do
-    {:error, {:invalid_provider_reference, provider}}
+  def run(%Message.Inbound{}, provider, session_store, transcript_store) do
+    cond do
+      not match?(%ProviderInstance{}, provider) ->
+        {:error, {:invalid_provider_reference, provider}}
+
+      not match?(%SessionStoreInstance{}, session_store) ->
+        {:error, {:invalid_session_store_reference, session_store}}
+
+      not match?(%TranscriptStoreInstance{}, transcript_store) ->
+        {:error, {:invalid_transcript_store_reference, transcript_store}}
+    end
   end
 
   defp resolve_session(nil, session_store) do
-    session_store.save(%Session{})
+    SessionStoreInstance.save(session_store, %Session{})
   end
 
   # When the caller already provides a session id, the orchestrator must reuse
   # that exact session instead of silently creating a new one.
   defp resolve_session(session_id, session_store) when is_binary(session_id) do
-    case session_store.get(session_id) do
+    case SessionStoreInstance.get(session_store, session_id) do
       {:ok, session} -> {:ok, session}
       :not_found -> {:error, :session_not_found}
     end
@@ -72,7 +86,7 @@ defmodule Nexus.Orchestrator do
          transcript_store
        )
        when is_binary(content) do
-    transcript_store.append(%Message.Transcript.User{
+    TranscriptStoreInstance.append(transcript_store, %Message.Transcript.User{
       session_id: session_id,
       content: content
     })
@@ -86,7 +100,7 @@ defmodule Nexus.Orchestrator do
   # orchestrator persists them in order and stops at the first store error.
   defp append_transcript_messages(messages, transcript_store) when is_list(messages) do
     Enum.reduce_while(messages, :ok, fn message, :ok ->
-      case transcript_store.append(message) do
+      case TranscriptStoreInstance.append(transcript_store, message) do
         {:ok, _persisted} -> {:cont, :ok}
         {:error, reason} -> {:halt, {:error, reason}}
       end

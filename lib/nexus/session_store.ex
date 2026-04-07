@@ -16,10 +16,13 @@ defmodule Nexus.SessionStore do
 
   alias Nexus.Session
 
+  @type config :: map()
+
   @doc """
   Loads a session by id.
   """
-  @callback get(session_id :: Session.id()) :: {:ok, Session.t()} | :not_found
+  @callback get(session_id :: Session.id(), config()) ::
+              {:ok, Session.t()} | :not_found | {:error, term()}
 
   @doc """
   Saves a session and returns the persisted value.
@@ -28,5 +31,5 @@ defmodule Nexus.SessionStore do
   A concrete store may decide to assign the session id during this step when it
   is still missing.
   """
-  @callback save(session :: Session.t()) :: {:ok, Session.t()} | {:error, term()}
+  @callback save(session :: Session.t(), config()) :: {:ok, Session.t()} | {:error, term()}
 end

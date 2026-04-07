@@ -2,7 +2,7 @@ defmodule Nexus.CLI do
   @moduledoc """
   Small CLI-facing entrypoint for running one Nexus turn.
 
-  This module bridges the CLI channel with the high-level `Nexus.run/3`
+  This module bridges the CLI channel with the high-level `Nexus.run/1`
   runtime entrypoint:
 
   - normalize raw CLI input
@@ -22,16 +22,16 @@ defmodule Nexus.CLI do
 
       %{session_id: nil | "session_123", user_input: "hello"}
   """
-  @spec run_once(map(), module(), module()) :: {:ok, Message.Outbound.t()} | {:error, term()}
-  def run_once(raw_input, session_store, transcript_store) when is_map(raw_input) do
+  @spec run_once(map()) :: {:ok, Message.Outbound.t()} | {:error, term()}
+  def run_once(raw_input) when is_map(raw_input) do
     with {:ok, inbound} <- CLIChannel.normalize_inbound(raw_input),
-         {:ok, outbound} <- Nexus.run(inbound, session_store, transcript_store),
+         {:ok, outbound} <- Nexus.run(inbound),
          :ok <- CLIChannel.deliver(outbound) do
       {:ok, outbound}
     end
   end
 
-  def run_once(_raw_input, _session_store, _transcript_store) do
+  def run_once(_raw_input) do
     {:error, :invalid_cli_input}
   end
 
@@ -43,17 +43,17 @@ defmodule Nexus.CLI do
       /new   starts a new session
       /exit  exits the loop
   """
-  @spec run_interactive(module(), module()) :: :ok
-  def run_interactive(session_store, transcript_store) do
+  @spec run_interactive() :: :ok
+  def run_interactive do
     IO.puts("Nexus interactive chat")
     IO.puts("Commands: /new, /exit")
 
-    interactive_loop(nil, session_store, transcript_store)
+    interactive_loop(nil)
   end
 
   # The interactive loop keeps the current session id in memory so repeated
   # turns in the same VM can reuse the persisted transcript.
-  defp interactive_loop(session_id, session_store, transcript_store) do
+  defp interactive_loop(session_id) do
     case IO.gets(prompt(session_id)) do
       nil ->
         :ok
@@ -61,43 +61,39 @@ defmodule Nexus.CLI do
       line ->
         line
         |> String.trim()
-        |> handle_interactive_input(session_id, session_store, transcript_store)
+        |> handle_interactive_input(session_id)
     end
   end
 
   # Empty lines are ignored so the operator can press enter without changing
   # the current session or producing noisy transcript entries.
-  defp handle_interactive_input("", session_id, session_store, transcript_store) do
-    interactive_loop(session_id, session_store, transcript_store)
+  defp handle_interactive_input("", session_id) do
+    interactive_loop(session_id)
   end
 
   # `/exit` stops the manual loop without affecting persisted state.
-  defp handle_interactive_input("/exit", _session_id, _session_store, _transcript_store) do
+  defp handle_interactive_input("/exit", _session_id) do
     IO.puts("bye")
     :ok
   end
 
   # `/new` discards only the in-memory session pointer so the next turn will
   # create a fresh session through the normal runtime path.
-  defp handle_interactive_input("/new", _session_id, session_store, transcript_store) do
+  defp handle_interactive_input("/new", _session_id) do
     IO.puts("started new session")
-    interactive_loop(nil, session_store, transcript_store)
+    interactive_loop(nil)
   end
 
   # Any other line is treated as raw user input for the current session.
-  defp handle_interactive_input(user_input, session_id, session_store, transcript_store) do
-    case run_once(
-           %{session_id: session_id, user_input: user_input},
-           session_store,
-           transcript_store
-         ) do
+  defp handle_interactive_input(user_input, session_id) do
+    case run_once(%{session_id: session_id, user_input: user_input}) do
       {:ok, outbound} ->
         IO.puts("session_id=#{outbound.session_id}")
-        interactive_loop(outbound.session_id, session_store, transcript_store)
+        interactive_loop(outbound.session_id)
 
       {:error, reason} ->
         IO.puts("error=#{inspect(reason)}")
-        interactive_loop(session_id, session_store, transcript_store)
+        interactive_loop(session_id)
     end
   end
 

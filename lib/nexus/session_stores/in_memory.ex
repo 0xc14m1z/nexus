@@ -17,16 +17,16 @@ defmodule Nexus.SessionStores.InMemory do
 
   This helper is mainly useful in tests.
   """
-  @spec clear() :: :ok
-  def clear do
-    ensure_table()
+  @spec clear(map()) :: :ok
+  def clear(config \\ %{}) do
+    ensure_table(config)
     :ets.delete_all_objects(@table)
     :ok
   end
 
   @impl true
-  def get(session_id) when is_binary(session_id) do
-    ensure_table()
+  def get(session_id, config) when is_binary(session_id) and is_map(config) do
+    ensure_table(config)
 
     case :ets.lookup(@table, session_id) do
       [{^session_id, session}] -> {:ok, session}
@@ -34,9 +34,11 @@ defmodule Nexus.SessionStores.InMemory do
     end
   end
 
+  def get(session_id) when is_binary(session_id), do: get(session_id, %{})
+
   @impl true
-  def save(%Session{} = session) do
-    ensure_table()
+  def save(%Session{} = session, config) when is_map(config) do
+    ensure_table(config)
 
     now = DateTime.utc_now()
 
@@ -51,6 +53,10 @@ defmodule Nexus.SessionStores.InMemory do
     {:ok, persisted_session}
   end
 
+  def save(%Session{} = session), do: save(session, %{})
+
+  # Existing sessions keep their assigned id, while brand new sessions get a
+  # simple monotonic identifier from the in-memory adapter.
   defp ensure_id(%Session{id: id} = session) when is_binary(id), do: session
 
   defp ensure_id(%Session{} = session) do
@@ -60,13 +66,16 @@ defmodule Nexus.SessionStores.InMemory do
     }
   end
 
+  # `created_at` is assigned only once so repeated saves behave like updates.
   defp ensure_created_at(%Session{created_at: nil} = session, now) do
     %{session | created_at: now}
   end
 
   defp ensure_created_at(%Session{} = session, _now), do: session
 
-  defp ensure_table do
+  # The in-memory adapter ignores config today, but it keeps the argument so it
+  # can participate in the same runtime configuration flow as file-backed stores.
+  defp ensure_table(_config) do
     case :ets.whereis(@table) do
       :undefined ->
         try do

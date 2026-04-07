@@ -34,7 +34,7 @@ defmodule Nexus.Integration.CLIFlowTest do
 
     output =
       capture_io(fn ->
-        assert {:ok, outbound} = CLI.run_once(raw_input, InMemory, InMemoryTranscriptStore)
+        assert {:ok, outbound} = CLI.run_once(raw_input)
         assert is_binary(outbound.session_id)
       end)
 
@@ -45,7 +45,7 @@ defmodule Nexus.Integration.CLIFlowTest do
   test "interactive CLI keeps the session alive across turns in the same VM" do
     output =
       capture_io("hello nexus\ncontinue\n/exit\n", fn ->
-        assert :ok = CLI.run_interactive(InMemory, InMemoryTranscriptStore)
+        assert :ok = CLI.run_interactive()
       end)
 
     assert output =~ "Nexus interactive chat"
