@@ -24,3 +24,6 @@ nexus-*.tar
 
 # Local Nexus runtime config with secrets.
 config/nexus.local.json
+
+# Default local persistence directory used by the file-backed stores.
+var/nexus/

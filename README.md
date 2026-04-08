@@ -24,6 +24,8 @@ The repository currently includes:
   - `AnthropicProvider` (minimal, non-streaming)
   - in-memory `SessionStore`
   - in-memory `TranscriptStore`
+  - file-backed `SessionStore`
+  - file-backed `TranscriptStore`
 - architecture notes and implementation plans
 - project rules for step-by-step learning
 - architecture diagrams for the current structure and flow
@@ -76,6 +78,8 @@ iex -S mix
 
 `mix nexus.cli` starts a tiny interactive loop in the current VM, so the
 in-memory session and transcript stores can keep state across multiple turns.
+With the file-backed stores configured, separate invocations can continue the
+same session as well.
 
 To use a real provider without editing Elixir config files, create a local JSON
 runtime config at `config/nexus.local.json`. Example:
@@ -91,18 +95,30 @@ runtime config at `config/nexus.local.json`. Example:
     }
   },
   "session_store": {
-    "adapter": "Nexus.SessionStores.InMemory",
-    "config": {}
+    "adapter": "Nexus.SessionStores.File",
+    "config": {
+      "directory": "var/nexus/sessions"
+    }
   },
   "transcript_store": {
-    "adapter": "Nexus.TranscriptStores.InMemory",
-    "config": {}
+    "adapter": "Nexus.TranscriptStores.File",
+    "config": {
+      "directory": "var/nexus/transcripts"
+    }
   }
 }
 ```
 
 `Nexus` will read `config/nexus.local.json` first, then `config/nexus.json`,
 and only fall back to application config if no JSON config file is present.
+
+With that setup, these two separate commands can share the same persisted
+history:
+
+```bash
+mix nexus.cli "hello nexus"
+mix nexus.cli --session-id session_1 "continue"
+```
 
 ## Project Docs
 
@@ -128,7 +144,8 @@ If you want to understand the runtime step by step, read these in order:
 ## Near-Term Goal
 
 The next implementation target is a tiny manual smoke path for the Anthropic
-provider, and it will continue to be built slowly and explicitly:
+provider on top of the file-backed stores, and it will continue to be built
+slowly and explicitly:
 
 - one small file at a time
 - with explanations of purpose and structure

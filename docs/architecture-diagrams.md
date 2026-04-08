@@ -144,14 +144,11 @@ flowchart TD
   - `Message.Transcript.Assistant`
 - tool-related transcript messages are defined, but not yet consumed by the builder
 - the current provider path is still synchronous and non-streaming
-- a minimal Anthropic adapter exists, but the repo does not yet expose a dedicated
-  manual smoke-test command for it
+- the default runtime config still uses in-memory stores and the fake provider
 
 ## Next Likely Step
 
 The next planned implementation step is:
 
-- add file-backed session and transcript stores and wire them through runtime config
-
-That will make `mix nexus.cli "..."` reusable across separate command invocations,
-not only inside one long-lived interactive session.
+- use the new file-backed stores in a real manual Anthropic smoke path
+- then pressure-test the provider abstraction with a second real adapter

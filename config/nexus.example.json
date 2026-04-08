@@ -8,11 +8,15 @@
     }
   },
   "session_store": {
-    "adapter": "Nexus.SessionStores.InMemory",
-    "config": {}
+    "adapter": "Nexus.SessionStores.File",
+    "config": {
+      "directory": "var/nexus/sessions"
+    }
   },
   "transcript_store": {
-    "adapter": "Nexus.TranscriptStores.InMemory",
-    "config": {}
+    "adapter": "Nexus.TranscriptStores.File",
+    "config": {
+      "directory": "var/nexus/transcripts"
+    }
   }
 }
