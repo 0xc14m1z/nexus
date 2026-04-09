@@ -3,9 +3,10 @@ defmodule Nexus.AdapterValidatorTest do
 
   alias Nexus.AdapterValidator
   alias Nexus.Channels.CLI
-  alias Nexus.TranscriptStores.InMemory, as: InMemoryTranscriptStore
   alias Nexus.Providers.Fake
   alias Nexus.SessionStores.InMemory, as: InMemorySessionStore
+  alias Nexus.Tools.CurrentTime
+  alias Nexus.TranscriptStores.InMemory, as: InMemoryTranscriptStore
 
   test "validate_provider/1 accepts a valid provider" do
     assert :ok = AdapterValidator.validate_provider(Fake)
@@ -39,5 +40,13 @@ defmodule Nexus.AdapterValidatorTest do
   test "validate_transcript_store/1 rejects a module that is not a transcript store" do
     assert {:error, {:invalid_transcript_store, String}} =
              AdapterValidator.validate_transcript_store(String)
+  end
+
+  test "validate_tool/1 accepts a valid tool" do
+    assert :ok = AdapterValidator.validate_tool(CurrentTime)
+  end
+
+  test "validate_tool/1 rejects a module that is not a tool" do
+    assert {:error, {:invalid_tool, String}} = AdapterValidator.validate_tool(String)
   end
 end

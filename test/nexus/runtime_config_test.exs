@@ -6,39 +6,24 @@ defmodule Nexus.RuntimeConfigTest do
   alias Nexus.RuntimeConfig
   alias Nexus.SessionStoreInstance
   alias Nexus.SessionStores.InMemory, as: InMemorySessionStore
+  alias Nexus.ToolInstance
+  alias Nexus.Tools.CurrentTime
   alias Nexus.TranscriptStoreInstance
   alias Nexus.TranscriptStores.InMemory, as: InMemoryTranscriptStore
 
   setup do
-    previous_config = Application.get_env(:nexus, :provider)
+    previous_provider = Application.get_env(:nexus, :provider)
     previous_session_store = Application.get_env(:nexus, :session_store)
+    previous_system_tools = Application.get_env(:nexus, :system_tools)
     previous_transcript_store = Application.get_env(:nexus, :transcript_store)
     previous_paths = Application.get_env(:nexus, :runtime_config_paths)
 
     on_exit(fn ->
-      if previous_config == nil do
-        Application.delete_env(:nexus, :provider)
-      else
-        Application.put_env(:nexus, :provider, previous_config)
-      end
-
-      if previous_session_store == nil do
-        Application.delete_env(:nexus, :session_store)
-      else
-        Application.put_env(:nexus, :session_store, previous_session_store)
-      end
-
-      if previous_transcript_store == nil do
-        Application.delete_env(:nexus, :transcript_store)
-      else
-        Application.put_env(:nexus, :transcript_store, previous_transcript_store)
-      end
-
-      if previous_paths == nil do
-        Application.delete_env(:nexus, :runtime_config_paths)
-      else
-        Application.put_env(:nexus, :runtime_config_paths, previous_paths)
-      end
+      restore_env(:provider, previous_provider)
+      restore_env(:session_store, previous_session_store)
+      restore_env(:system_tools, previous_system_tools)
+      restore_env(:transcript_store, previous_transcript_store)
+      restore_env(:runtime_config_paths, previous_paths)
     end)
 
     :ok
@@ -48,6 +33,7 @@ defmodule Nexus.RuntimeConfigTest do
     Application.put_env(:nexus, :provider, adapter: Fake, config: %{})
     Application.put_env(:nexus, :session_store, adapter: InMemorySessionStore, config: %{})
     Application.put_env(:nexus, :transcript_store, adapter: InMemoryTranscriptStore, config: %{})
+    Application.put_env(:nexus, :system_tools, [[adapter: CurrentTime, config: %{}]])
 
     assert {:ok,
             %{
@@ -56,11 +42,12 @@ defmodule Nexus.RuntimeConfigTest do
               transcript_store: %TranscriptStoreInstance{
                 adapter: InMemoryTranscriptStore,
                 config: %{}
-              }
+              },
+              tools: [%ToolInstance{adapter: CurrentTime, source: :system}]
             }} = RuntimeConfig.runtime_dependencies()
   end
 
-  test "runtime_dependencies_from_file/1 builds provider and store instances from one JSON file" do
+  test "runtime_dependencies_from_file/1 adds configured tools from one JSON file" do
     path = Path.join(System.tmp_dir!(), "nexus-runtime-dependencies-config-test.json")
 
     File.write!(path, """
@@ -76,7 +63,13 @@ defmodule Nexus.RuntimeConfigTest do
       "transcript_store": {
         "adapter": "Nexus.TranscriptStores.InMemory",
         "config": {}
-      }
+      },
+      "tools": [
+        {
+          "adapter": "Nexus.Tools.CurrentTime",
+          "config": {}
+        }
+      ]
     }
     """)
 
@@ -89,7 +82,55 @@ defmodule Nexus.RuntimeConfigTest do
               transcript_store: %TranscriptStoreInstance{
                 adapter: InMemoryTranscriptStore,
                 config: %{}
-              }
+              },
+              tools: [%ToolInstance{adapter: CurrentTime, source: :configured}]
+            }} = RuntimeConfig.runtime_dependencies_from_file(path)
+  end
+
+  test "runtime_dependencies_from_file/1 keeps system tools separate from configured tools" do
+    path = Path.join(System.tmp_dir!(), "nexus-runtime-dependencies-with-tools-config-test.json")
+
+    Application.put_env(:nexus, :system_tools, [
+      [adapter: CurrentTime, config: %{label: "system"}]
+    ])
+
+    File.write!(path, """
+    {
+      "provider": {
+        "adapter": "Nexus.Providers.Fake",
+        "config": {}
+      },
+      "session_store": {
+        "adapter": "Nexus.SessionStores.InMemory",
+        "config": {}
+      },
+      "transcript_store": {
+        "adapter": "Nexus.TranscriptStores.InMemory",
+        "config": {}
+      },
+      "tools": [
+        {
+          "adapter": "Nexus.Tools.CurrentTime",
+          "config": {
+            "label": "configured"
+          }
+        }
+      ]
+    }
+    """)
+
+    on_exit(fn -> File.rm(path) end)
+
+    assert {:ok,
+            %{
+              tools: [
+                %ToolInstance{adapter: CurrentTime, source: :system, config: %{label: "system"}},
+                %ToolInstance{
+                  adapter: CurrentTime,
+                  source: :configured,
+                  config: %{"label" => "configured"}
+                }
+              ]
             }} = RuntimeConfig.runtime_dependencies_from_file(path)
   end
 
@@ -160,39 +201,34 @@ defmodule Nexus.RuntimeConfigTest do
              RuntimeConfig.transcript_store_instance_from_file(path)
   end
 
-  test "provider_instance/0 reads the first configured JSON path before app config" do
-    path = Path.join(System.tmp_dir!(), "nexus-runtime-config-auto-test.json")
+  test "tool_instances/0 returns only system tools when no runtime file is present" do
+    Application.put_env(:nexus, :system_tools, [[adapter: CurrentTime, config: %{}]])
+    Application.put_env(:nexus, :runtime_config_paths, [])
+
+    assert {:ok, [%ToolInstance{adapter: CurrentTime, source: :system}]} =
+             RuntimeConfig.tool_instances()
+  end
+
+  test "tool_instances_from_file/1 returns configured tools from a JSON file" do
+    path = Path.join(System.tmp_dir!(), "nexus-tools-config-test.json")
 
     File.write!(path, """
     {
-      "provider": {
-        "adapter": "Nexus.Providers.Fake",
-        "config": {}
-      },
-      "session_store": {
-        "adapter": "Nexus.SessionStores.InMemory",
-        "config": {}
-      },
-      "transcript_store": {
-        "adapter": "Nexus.TranscriptStores.InMemory",
-        "config": {}
-      }
+      "tools": [
+        {
+          "adapter": "Nexus.Tools.CurrentTime",
+          "config": {}
+        }
+      ]
     }
     """)
 
     on_exit(fn -> File.rm(path) end)
 
-    Application.put_env(:nexus, :provider, adapter: Nexus.Providers.Anthropic, config: %{})
-    Application.put_env(:nexus, :runtime_config_paths, [path])
-
-    assert {:ok,
-            %{
-              provider: %ProviderInstance{adapter: Fake, config: %{}},
-              session_store: %SessionStoreInstance{adapter: InMemorySessionStore, config: %{}},
-              transcript_store: %TranscriptStoreInstance{
-                adapter: InMemoryTranscriptStore,
-                config: %{}
-              }
-            }} = RuntimeConfig.runtime_dependencies()
+    assert {:ok, [%ToolInstance{adapter: CurrentTime, source: :configured}]} =
+             RuntimeConfig.tool_instances_from_file(path)
   end
+
+  defp restore_env(key, nil), do: Application.delete_env(:nexus, key)
+  defp restore_env(key, value), do: Application.put_env(:nexus, key, value)
 end

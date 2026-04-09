@@ -40,6 +40,14 @@ defmodule Nexus.AdapterValidator do
     validate_callbacks(module, [{:append, 2}, {:list_by_session, 2}], :invalid_transcript_store)
   end
 
+  @doc """
+  Validates a tool module.
+  """
+  @spec validate_tool(module()) :: :ok | {:error, {atom(), module()}}
+  def validate_tool(module) do
+    validate_callbacks(module, [{:definition, 1}, {:call, 2}], :invalid_tool)
+  end
+
   defp validate_callbacks(module, callbacks, error_tag)
        when is_atom(module) and is_atom(error_tag) do
     cond do

@@ -11,3 +11,5 @@ config :nexus, :session_store,
 config :nexus, :transcript_store,
   adapter: Nexus.TranscriptStores.InMemory,
   config: %{}
+
+config :nexus, :system_tools, []

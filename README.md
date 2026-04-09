@@ -27,6 +27,8 @@ The repository currently includes:
   - in-memory `TranscriptStore`
   - file-backed `SessionStore`
   - file-backed `TranscriptStore`
+  - a minimal `Tool` boundary
+  - a first built-in tool: `CurrentTime`
 - architecture notes and implementation plans
 - project rules for step-by-step learning
 - architecture diagrams for the current structure and flow
@@ -64,6 +66,16 @@ flowchart LR
 
 Provider-specific configuration is expected to come from external runtime
 configuration, not from the provider adapter itself.
+
+Tool configuration is now split into two sources:
+
+- `system_tools`
+  tools made available by the harness itself through app config
+- `tools`
+  tools explicitly added through runtime JSON config
+
+At this stage, tools are configured and validated, but they are not yet wired
+into the provider or agent loop.
 
 ## Run the Baseline
 

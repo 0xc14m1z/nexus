@@ -126,6 +126,8 @@ flowchart TD
   wraps a session store adapter plus resolved config so the orchestrator does not know storage setup details
 - `TranscriptStoreInstance`
   wraps a transcript store adapter plus resolved config so the orchestrator can persist transcript entries uniformly
+- `ToolInstance`
+  wraps one configured tool adapter and records whether it came from `system_tools` or runtime `tools`
 - `AgentLoop`
   executes one turn against the provider and returns assistant output plus transcript items
 - `ContextBuilder`
@@ -136,9 +138,12 @@ flowchart TD
   persists canonical session history
 - `Provider`
   turns `Message.LLM[]` into assistant content
+- `Tool`
+  exposes a provider-facing definition plus executable behavior
 
 ## Current Limitations
 
+- tools are configured and validated, but they are not yet connected to the provider path or the agent loop
 - `ContextBuilder` currently supports only transcript messages of type:
   - `Message.Transcript.User`
   - `Message.Transcript.Assistant`
