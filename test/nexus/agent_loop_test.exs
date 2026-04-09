@@ -18,6 +18,10 @@ defmodule Nexus.AgentLoopTest do
     assert {:ok,
             %Result{
               assistant_content: generated_content,
+              llm_messages: [
+                %Message.LLM{role: :system},
+                %Message.LLM{role: :user, content: "hello nexus"}
+              ],
               transcript_messages: [
                 %Message.Transcript.Assistant{content: generated_content}
               ]

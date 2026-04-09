@@ -10,8 +10,9 @@ defmodule Nexus.AgentLoop.Result do
 
   @type t :: %__MODULE__{
           assistant_content: String.t(),
-          transcript_messages: [Message.Transcript.t()]
+          transcript_messages: [Message.Transcript.t()],
+          llm_messages: [Message.LLM.t()]
         }
 
-  defstruct [:assistant_content, transcript_messages: []]
+  defstruct [:assistant_content, transcript_messages: [], llm_messages: []]
 end

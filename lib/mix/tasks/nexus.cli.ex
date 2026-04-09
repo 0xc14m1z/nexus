@@ -7,6 +7,7 @@ defmodule Mix.Tasks.Nexus.Cli do
       mix nexus.cli "hello nexus"
       mix nexus.cli --session-id session_123 "continue"
       mix nexus.cli --config config/nexus.local.json "hello nexus"
+      mix nexus.cli --debug "hello nexus"
       mix nexus.cli
   """
 
@@ -22,15 +23,14 @@ defmodule Mix.Tasks.Nexus.Cli do
 
     {opts, remaining, invalid} =
       OptionParser.parse(args,
-        strict: [session_id: :string, config: :string],
-        aliases: [s: :session_id, c: :config]
+        strict: [session_id: :string, config: :string, debug: :boolean],
+        aliases: [s: :session_id, c: :config, d: :debug]
       )
 
     cli_opts =
-      case Keyword.get(opts, :config) do
-        nil -> []
-        path -> [config_path: path]
-      end
+      []
+      |> maybe_put_cli_opt(:config_path, Keyword.get(opts, :config))
+      |> maybe_put_cli_opt(:debug, Keyword.get(opts, :debug, false))
 
     case {invalid, remaining} do
       {[], []} ->
@@ -53,9 +53,15 @@ defmodule Mix.Tasks.Nexus.Cli do
       _ ->
         Mix.raise("""
         usage:
-          mix nexus.cli [--config path/to/config.json] [--session-id session_123] "message text"
+          mix nexus.cli [--config path/to/config.json] [--debug] [--session-id session_123] "message text"
           mix nexus.cli
         """)
     end
   end
+
+  # CLI options are assembled only when present so the downstream runtime code
+  # sees a clean keyword list instead of placeholder values.
+  defp maybe_put_cli_opt(opts, _key, nil), do: opts
+  defp maybe_put_cli_opt(opts, _key, false), do: opts
+  defp maybe_put_cli_opt(opts, key, value), do: Keyword.put(opts, key, value)
 end

@@ -56,6 +56,25 @@ defmodule Nexus.Integration.CLIFlowTest do
     assert output =~ "bye"
   end
 
+  test "run_once/2 prints a debug report when debug is enabled" do
+    raw_input = %{
+      session_id: nil,
+      user_input: "hello nexus"
+    }
+
+    output =
+      capture_io(fn ->
+        assert {:ok, _outbound} = CLI.run_once(raw_input, debug: true)
+      end)
+
+    assert output =~ "Fake response:"
+    assert output =~ "--- debug ---"
+    assert output =~ "provider: Nexus.Providers.Fake"
+    assert output =~ "llm_messages:"
+    assert output =~ "[1] system"
+    assert output =~ "[2] user"
+  end
+
   test "run_once/2 can use an explicit JSON config file with file-backed stores" do
     base_directory =
       Path.join(System.tmp_dir!(), "nexus-cli-config-test-#{System.unique_integer([:positive])}")

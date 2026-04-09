@@ -34,6 +34,7 @@ defmodule Nexus.AgentLoop do
       {:ok,
        %Result{
          assistant_content: generated_text,
+         llm_messages: messages,
          transcript_messages: [
            %Message.Transcript.Assistant{
              session_id: session_id,

@@ -28,7 +28,8 @@ defmodule Nexus.CLI do
   def run_once(raw_input, opts) when is_map(raw_input) and is_list(opts) do
     with {:ok, inbound} <- CLIChannel.normalize_inbound(raw_input),
          {:ok, outbound} <- run_nexus(inbound, opts),
-         :ok <- CLIChannel.deliver(outbound) do
+         :ok <- CLIChannel.deliver(outbound),
+         :ok <- maybe_print_debug(outbound, opts) do
       {:ok, outbound}
     end
   end
@@ -108,5 +109,62 @@ defmodule Nexus.CLI do
   # config path can override the default lookup order for smoke tests.
   defp run_nexus(inbound, opts) do
     Nexus.run(inbound, opts)
+  end
+
+  # Debug output stays outside the main runtime content path so the normal
+  # channel delivery remains unchanged and readable.
+  defp maybe_print_debug(%Message.Outbound{metadata: %{debug: debug}}, opts)
+       when is_list(opts) do
+    if Keyword.get(opts, :debug, false) do
+      IO.puts(format_debug_report(debug))
+    else
+      :ok
+    end
+  end
+
+  defp maybe_print_debug(%Message.Outbound{}, _opts), do: :ok
+
+  # A compact text report is enough for now. Later, the same data can also be
+  # routed into structured logs without changing the runtime debug payload.
+  defp format_debug_report(debug) do
+    [
+      "--- debug ---",
+      "session_id: #{debug.session_id}",
+      "provider: #{debug.provider.adapter}",
+      "provider_config: #{inspect(debug.provider.config, pretty: true)}",
+      "session_store: #{debug.session_store.adapter}",
+      "session_store_config: #{inspect(debug.session_store.config, pretty: true)}",
+      "transcript_store: #{debug.transcript_store.adapter}",
+      "transcript_store_config: #{inspect(debug.transcript_store.config, pretty: true)}",
+      "transcript_message_count: #{debug.transcript_message_count}",
+      "llm_messages:",
+      format_llm_messages(debug.llm_messages),
+      "-------------"
+    ]
+    |> List.flatten()
+    |> Enum.join("\n")
+  end
+
+  # The LLM message list is the most useful thing to inspect when a turn feels
+  # wrong, so each message is rendered with its position and role.
+  defp format_llm_messages(messages) when is_list(messages) do
+    messages
+    |> Enum.with_index(1)
+    |> Enum.map(fn {message, index} ->
+      [
+        "  [#{index}] #{message.role}",
+        indent_multiline(message.content, "      ")
+      ]
+    end)
+  end
+
+  defp format_llm_messages(_messages), do: ["  [invalid llm_messages]"]
+
+  # Indenting multi-line content keeps the debug report readable even when the
+  # system prompt or transcript contains several paragraphs.
+  defp indent_multiline(content, prefix) when is_binary(content) do
+    content
+    |> String.split("\n")
+    |> Enum.map_join("\n", &(prefix <> &1))
   end
 end

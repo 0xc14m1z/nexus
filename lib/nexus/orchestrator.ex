@@ -47,7 +47,15 @@ defmodule Nexus.Orchestrator do
            session_id: session.id,
            channel: inbound.channel,
            content: result.assistant_content,
-           metadata: %{}
+           metadata:
+             build_outbound_metadata(
+               session,
+               provider,
+               session_store,
+               transcript_store,
+               transcript_messages,
+               result
+             )
          }}
       end
     end
@@ -106,4 +114,65 @@ defmodule Nexus.Orchestrator do
       end
     end)
   end
+
+  defp build_outbound_metadata(
+         session,
+         provider,
+         session_store,
+         transcript_store,
+         transcript_messages,
+         result
+       ) do
+    %{
+      debug: %{
+        session_id: session.id,
+        provider: summarize_instance(provider),
+        session_store: summarize_instance(session_store),
+        transcript_store: summarize_instance(transcript_store),
+        transcript_message_count: length(transcript_messages),
+        llm_messages: result.llm_messages
+      }
+    }
+  end
+
+  # Runtime instances all expose the same `adapter + config` shape, so a single
+  # summarizer keeps debug output consistent across providers and stores.
+  defp summarize_instance(%{adapter: adapter, config: config}) do
+    %{
+      adapter: inspect(adapter),
+      config: sanitize_config(config)
+    }
+  end
+
+  # Debug output should help understand the runtime without leaking secrets or
+  # dumping unreadable function references into the terminal.
+  defp sanitize_config(config) when is_map(config) do
+    Map.new(config, fn {key, value} ->
+      {key, sanitize_config_entry(key, value)}
+    end)
+  end
+
+  defp sanitize_config(other), do: other
+
+  defp sanitize_config_entry(key, _value) when key in [:api_key, "api_key"] do
+    "[REDACTED]"
+  end
+
+  defp sanitize_config_entry(_key, value) when is_function(value) do
+    "[FUNCTION]"
+  end
+
+  defp sanitize_config_entry(_key, value) when is_map(value) do
+    sanitize_config(value)
+  end
+
+  defp sanitize_config_entry(_key, value) when is_list(value) do
+    Enum.map(value, fn
+      entry when is_map(entry) -> sanitize_config(entry)
+      entry when is_function(entry) -> "[FUNCTION]"
+      entry -> entry
+    end)
+  end
+
+  defp sanitize_config_entry(_key, value), do: value
 end

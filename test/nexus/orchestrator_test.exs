@@ -88,6 +88,39 @@ defmodule Nexus.OrchestratorTest do
            ] = messages
   end
 
+  test "run/4 always adds sanitized debug metadata", %{
+    session_store: session_store,
+    transcript_store: transcript_store
+  } do
+    {:ok, provider} = ProviderInstance.new(Fake, %{api_key: "secret", request_fun: fn -> :ok end})
+
+    inbound = %Message.Inbound{
+      session_id: nil,
+      channel: :cli,
+      content: "hello nexus",
+      metadata: %{}
+    }
+
+    assert {:ok, outbound} =
+             Orchestrator.run(inbound, provider, session_store, transcript_store)
+
+    assert %{
+             debug: %{
+               session_id: session_id,
+               provider: %{
+                 adapter: "Nexus.Providers.Fake",
+                 config: %{api_key: "[REDACTED]", request_fun: "[FUNCTION]"}
+               },
+               llm_messages: [
+                 %Message.LLM{role: :system},
+                 %Message.LLM{role: :user, content: "hello nexus"}
+               ]
+             }
+           } = outbound.metadata
+
+    assert session_id == outbound.session_id
+  end
+
   test "run/4 builds the next turn from the existing session transcript", %{
     provider: provider,
     session_store: session_store,
