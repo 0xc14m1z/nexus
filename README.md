@@ -74,6 +74,7 @@ mix test
 mix nexus.cli
 mix nexus.cli "hello nexus"
 mix nexus.cli --debug "hello nexus"
+mix nexus.cli --debug-json "hello nexus"
 mix nexus.cli --config config/nexus.local.json "hello nexus"
 mix run -e 'Application.ensure_all_started(:nexus) |> IO.inspect()'
 iex -S mix

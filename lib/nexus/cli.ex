@@ -14,6 +14,7 @@ defmodule Nexus.CLI do
 
   alias Nexus.Channels.CLI, as: CLIChannel
   alias Nexus.Message
+  alias Nexus.StructuredLog
 
   @doc """
   Runs one CLI turn from a raw payload.
@@ -113,12 +114,17 @@ defmodule Nexus.CLI do
 
   # Debug output stays outside the main runtime content path so the normal
   # channel delivery remains unchanged and readable.
-  defp maybe_print_debug(%Message.Outbound{metadata: %{debug: debug}}, opts)
+  defp maybe_print_debug(%Message.Outbound{metadata: %{debug: debug}} = outbound, opts)
        when is_list(opts) do
-    if Keyword.get(opts, :debug, false) do
-      IO.puts(format_debug_report(debug))
-    else
-      :ok
+    cond do
+      Keyword.get(opts, :debug_json, false) ->
+        IO.puts(Jason.encode!(StructuredLog.turn_debug(outbound)))
+
+      Keyword.get(opts, :debug, false) ->
+        IO.puts(format_debug_report(debug))
+
+      true ->
+        :ok
     end
   end
 

@@ -75,6 +75,36 @@ defmodule Nexus.Integration.CLIFlowTest do
     assert output =~ "[2] user"
   end
 
+  test "run_once/2 prints structured debug JSON when debug_json is enabled" do
+    raw_input = %{
+      session_id: nil,
+      user_input: "hello nexus"
+    }
+
+    output =
+      capture_io(fn ->
+        assert {:ok, _outbound} = CLI.run_once(raw_input, debug_json: true)
+      end)
+
+    lines =
+      output
+      |> String.trim_trailing()
+      |> String.split("\n")
+
+    response = Enum.join(Enum.drop(lines, -1), "\n")
+    json_line = List.last(lines)
+
+    assert response =~ "Fake response:"
+
+    assert {:ok, payload} = Jason.decode(json_line)
+    assert payload["event"] == "nexus.turn.debug"
+    assert payload["channel"] == "cli"
+    assert payload["debug"]["provider"]["adapter"] == "Nexus.Providers.Fake"
+
+    assert [%{"role" => "system"}, %{"role" => "user", "content" => "hello nexus"}] =
+             payload["debug"]["llm_messages"]
+  end
+
   test "run_once/2 can use an explicit JSON config file with file-backed stores" do
     base_directory =
       Path.join(System.tmp_dir!(), "nexus-cli-config-test-#{System.unique_integer([:positive])}")

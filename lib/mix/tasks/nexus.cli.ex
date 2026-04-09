@@ -8,6 +8,7 @@ defmodule Mix.Tasks.Nexus.Cli do
       mix nexus.cli --session-id session_123 "continue"
       mix nexus.cli --config config/nexus.local.json "hello nexus"
       mix nexus.cli --debug "hello nexus"
+      mix nexus.cli --debug-json "hello nexus"
       mix nexus.cli
   """
 
@@ -23,7 +24,7 @@ defmodule Mix.Tasks.Nexus.Cli do
 
     {opts, remaining, invalid} =
       OptionParser.parse(args,
-        strict: [session_id: :string, config: :string, debug: :boolean],
+        strict: [session_id: :string, config: :string, debug: :boolean, debug_json: :boolean],
         aliases: [s: :session_id, c: :config, d: :debug]
       )
 
@@ -31,6 +32,7 @@ defmodule Mix.Tasks.Nexus.Cli do
       []
       |> maybe_put_cli_opt(:config_path, Keyword.get(opts, :config))
       |> maybe_put_cli_opt(:debug, Keyword.get(opts, :debug, false))
+      |> maybe_put_cli_opt(:debug_json, Keyword.get(opts, :debug_json, false))
 
     case {invalid, remaining} do
       {[], []} ->
@@ -44,7 +46,9 @@ defmodule Mix.Tasks.Nexus.Cli do
 
         case CLI.run_once(raw_input, cli_opts) do
           {:ok, outbound} ->
-            Mix.shell().info("session_id=#{outbound.session_id}")
+            unless Keyword.get(cli_opts, :debug_json, false) do
+              Mix.shell().info("session_id=#{outbound.session_id}")
+            end
 
           {:error, reason} ->
             Mix.raise("nexus.cli failed: #{inspect(reason)}")
@@ -53,7 +57,7 @@ defmodule Mix.Tasks.Nexus.Cli do
       _ ->
         Mix.raise("""
         usage:
-          mix nexus.cli [--config path/to/config.json] [--debug] [--session-id session_123] "message text"
+          mix nexus.cli [--config path/to/config.json] [--debug] [--debug-json] [--session-id session_123] "message text"
           mix nexus.cli
         """)
     end
