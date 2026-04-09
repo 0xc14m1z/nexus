@@ -60,6 +60,39 @@ defmodule Nexus.RuntimeConfigTest do
             }} = RuntimeConfig.runtime_dependencies()
   end
 
+  test "runtime_dependencies_from_file/1 builds provider and store instances from one JSON file" do
+    path = Path.join(System.tmp_dir!(), "nexus-runtime-dependencies-config-test.json")
+
+    File.write!(path, """
+    {
+      "provider": {
+        "adapter": "Nexus.Providers.Fake",
+        "config": {}
+      },
+      "session_store": {
+        "adapter": "Nexus.SessionStores.InMemory",
+        "config": {}
+      },
+      "transcript_store": {
+        "adapter": "Nexus.TranscriptStores.InMemory",
+        "config": {}
+      }
+    }
+    """)
+
+    on_exit(fn -> File.rm(path) end)
+
+    assert {:ok,
+            %{
+              provider: %ProviderInstance{adapter: Fake, config: %{}},
+              session_store: %SessionStoreInstance{adapter: InMemorySessionStore, config: %{}},
+              transcript_store: %TranscriptStoreInstance{
+                adapter: InMemoryTranscriptStore,
+                config: %{}
+              }
+            }} = RuntimeConfig.runtime_dependencies_from_file(path)
+  end
+
   test "provider_instance/0 returns an error when provider config is missing" do
     Application.delete_env(:nexus, :provider)
 

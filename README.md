@@ -35,7 +35,7 @@ The repository currently includes:
 ```mermaid
 flowchart LR
     User --> CLI[CLI Channel]
-    CLI --> NexusRun[Nexus.run/1]
+    CLI --> NexusRun[Nexus.run/2]
     NexusRun --> Orchestrator
     NexusRun --> SessionStoreInstance
     NexusRun --> TranscriptStoreInstance
@@ -53,7 +53,7 @@ flowchart LR
 ## How One Turn Works
 
 1. A channel normalizes external input into `Message.Inbound`.
-2. `Nexus.run/1` resolves `ProviderInstance`, `SessionStoreInstance`, and `TranscriptStoreInstance` from runtime configuration.
+2. `Nexus.run/2` resolves `ProviderInstance`, `SessionStoreInstance`, and `TranscriptStoreInstance` from runtime configuration.
 3. The `Orchestrator` resolves or creates the session.
 4. The inbound user message is persisted in the transcript.
 5. The `AgentLoop` receives the current session transcript.
@@ -72,6 +72,7 @@ Use these commands from the project root:
 mix test
 mix nexus.cli
 mix nexus.cli "hello nexus"
+mix nexus.cli --config config/nexus.local.json "hello nexus"
 mix run -e 'Application.ensure_all_started(:nexus) |> IO.inspect()'
 iex -S mix
 ```
@@ -116,8 +117,8 @@ With that setup, these two separate commands can share the same persisted
 history:
 
 ```bash
-mix nexus.cli "hello nexus"
-mix nexus.cli --session-id session_1 "continue"
+mix nexus.cli --config config/nexus.local.json "hello nexus"
+mix nexus.cli --config config/nexus.local.json --session-id session_1 "continue"
 ```
 
 ## Project Docs

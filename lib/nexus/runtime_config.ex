@@ -53,6 +53,25 @@ defmodule Nexus.RuntimeConfig do
   end
 
   @doc """
+  Resolves the runtime dependencies declared in one explicit JSON config file.
+  """
+  @spec runtime_dependencies_from_file(Path.t()) ::
+          {:ok, runtime_dependencies()} | {:error, term()}
+  def runtime_dependencies_from_file(path) when is_binary(path) do
+    with {:ok, {:file, decoded}} <- load_runtime_source_from_file(path),
+         {:ok, provider} <- build_provider_instance({:file, decoded}),
+         {:ok, session_store} <- build_session_store_instance({:file, decoded}),
+         {:ok, transcript_store} <- build_transcript_store_instance({:file, decoded}) do
+      {:ok,
+       %{
+         provider: provider,
+         session_store: session_store,
+         transcript_store: transcript_store
+       }}
+    end
+  end
+
+  @doc """
   Builds the configured provider instance declared in runtime configuration.
   """
   @spec provider_instance() :: {:ok, ProviderInstance.t()} | {:error, term()}

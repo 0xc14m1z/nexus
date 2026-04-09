@@ -55,4 +55,58 @@ defmodule Nexus.Integration.CLIFlowTest do
     assert output =~ "continue"
     assert output =~ "bye"
   end
+
+  test "run_once/2 can use an explicit JSON config file with file-backed stores" do
+    base_directory =
+      Path.join(System.tmp_dir!(), "nexus-cli-config-test-#{System.unique_integer([:positive])}")
+
+    sessions_directory = Path.join(base_directory, "sessions")
+    transcripts_directory = Path.join(base_directory, "transcripts")
+    config_path = Path.join(base_directory, "nexus.test.json")
+
+    File.mkdir_p!(sessions_directory)
+    File.mkdir_p!(transcripts_directory)
+
+    File.write!(config_path, """
+    {
+      "provider": {
+        "adapter": "Nexus.Providers.Fake",
+        "config": {}
+      },
+      "session_store": {
+        "adapter": "Nexus.SessionStores.File",
+        "config": {
+          "directory": "#{sessions_directory}"
+        }
+      },
+      "transcript_store": {
+        "adapter": "Nexus.TranscriptStores.File",
+        "config": {
+          "directory": "#{transcripts_directory}"
+        }
+      }
+    }
+    """)
+
+    on_exit(fn -> File.rm_rf(base_directory) end)
+
+    output =
+      capture_io(fn ->
+        assert {:ok, first_outbound} =
+                 CLI.run_once(%{session_id: nil, user_input: "hello nexus"},
+                   config_path: config_path
+                 )
+
+        assert {:ok, second_outbound} =
+                 CLI.run_once(
+                   %{session_id: first_outbound.session_id, user_input: "continue"},
+                   config_path: config_path
+                 )
+
+        assert second_outbound.content =~ "hello nexus"
+        assert second_outbound.content =~ "continue"
+      end)
+
+    assert output =~ "Fake response:"
+  end
 end

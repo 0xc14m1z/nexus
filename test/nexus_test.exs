@@ -68,4 +68,40 @@ defmodule NexusTest do
     assert {:error, :missing_provider_config} =
              Nexus.run(inbound)
   end
+
+  test "run/2 can use one explicit JSON config file" do
+    path = Path.join(System.tmp_dir!(), "nexus-run-from-config-test.json")
+
+    File.write!(path, """
+    {
+      "provider": {
+        "adapter": "Nexus.Providers.Fake",
+        "config": {}
+      },
+      "session_store": {
+        "adapter": "Nexus.SessionStores.InMemory",
+        "config": {}
+      },
+      "transcript_store": {
+        "adapter": "Nexus.TranscriptStores.InMemory",
+        "config": {}
+      }
+    }
+    """)
+
+    on_exit(fn -> File.rm(path) end)
+
+    inbound = %Message.Inbound{
+      session_id: nil,
+      channel: :cli,
+      content: "hello from explicit config",
+      metadata: %{}
+    }
+
+    assert {:ok, %Message.Outbound{content: content}} =
+             Nexus.run(inbound, config_path: path)
+
+    assert content =~ "Fake response:"
+    assert content =~ "hello from explicit config"
+  end
 end

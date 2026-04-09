@@ -11,7 +11,7 @@ current structure and flow can be inspected quickly before reading code.
 flowchart LR
     User[User]
     CLI[CLI Channel]
-    Runtime[Nexus.run/1]
+    Runtime[Nexus.run/2]
     Inbound[Message.Inbound]
     Orchestrator[Orchestrator]
     SessionStoreInstance[SessionStoreInstance]
@@ -59,7 +59,7 @@ flowchart LR
 sequenceDiagram
     participant U as User
     participant C as CLI Channel
-    participant R as Nexus.run/1
+    participant R as Nexus.run/2
     participant O as Orchestrator
     participant SSI as SessionStoreInstance
     participant TSI as TranscriptStoreInstance
@@ -118,7 +118,7 @@ flowchart TD
   normalizes external input into `Message.Inbound` and delivers `Message.Outbound`
 - `Orchestrator`
   resolves the session, persists transcript boundaries, and coordinates one turn
-- `Nexus.run/1`
+- `Nexus.run/2`
   reads runtime config, builds provider/session/transcript store instances, and delegates to the orchestrator
 - `ProviderInstance`
   wraps a provider adapter plus resolved config so the agent loop does not deal with setup concerns

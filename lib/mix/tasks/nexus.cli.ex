@@ -6,6 +6,7 @@ defmodule Mix.Tasks.Nexus.Cli do
 
       mix nexus.cli "hello nexus"
       mix nexus.cli --session-id session_123 "continue"
+      mix nexus.cli --config config/nexus.local.json "hello nexus"
       mix nexus.cli
   """
 
@@ -21,13 +22,19 @@ defmodule Mix.Tasks.Nexus.Cli do
 
     {opts, remaining, invalid} =
       OptionParser.parse(args,
-        strict: [session_id: :string],
-        aliases: [s: :session_id]
+        strict: [session_id: :string, config: :string],
+        aliases: [s: :session_id, c: :config]
       )
+
+    cli_opts =
+      case Keyword.get(opts, :config) do
+        nil -> []
+        path -> [config_path: path]
+      end
 
     case {invalid, remaining} do
       {[], []} ->
-        CLI.run_interactive()
+        CLI.run_interactive(cli_opts)
 
       {[], [user_input]} ->
         raw_input = %{
@@ -35,7 +42,7 @@ defmodule Mix.Tasks.Nexus.Cli do
           user_input: user_input
         }
 
-        case CLI.run_once(raw_input) do
+        case CLI.run_once(raw_input, cli_opts) do
           {:ok, outbound} ->
             Mix.shell().info("session_id=#{outbound.session_id}")
 
@@ -46,7 +53,7 @@ defmodule Mix.Tasks.Nexus.Cli do
       _ ->
         Mix.raise("""
         usage:
-          mix nexus.cli [--session-id session_123] "message text"
+          mix nexus.cli [--config path/to/config.json] [--session-id session_123] "message text"
           mix nexus.cli
         """)
     end
