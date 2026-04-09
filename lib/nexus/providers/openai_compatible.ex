@@ -16,17 +16,19 @@ defmodule Nexus.Providers.OpenAICompatible do
   @behaviour Nexus.Provider
 
   alias Nexus.Message
+  alias Nexus.Provider
 
   @default_base_url "http://localhost:1234/v1"
   @default_temperature 0.7
 
   @impl true
-  def generate(messages, config) when is_list(messages) and is_map(config) do
+  def generate(%Provider.Request{messages: messages}, config)
+      when is_list(messages) and is_map(config) do
     with {:ok, model} <- fetch_model(config),
          {:ok, body} <- build_request_body(messages, model, config),
          {:ok, response} <- post_chat_completions(body, config),
          {:ok, generated_text} <- extract_text(response.body) do
-      {:ok, generated_text}
+      {:ok, %Provider.Result{content: generated_text}}
     end
   end
 

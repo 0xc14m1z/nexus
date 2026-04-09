@@ -2,16 +2,19 @@ defmodule Nexus.Providers.OpenAICompatibleTest do
   use ExUnit.Case, async: false
 
   alias Nexus.Message
+  alias Nexus.Provider
   alias Nexus.Providers.OpenAICompatible
 
   test "generate/2 returns an error when the model is missing" do
-    messages = [
-      %Message.LLM{role: :system, content: "You are Nexus."},
-      %Message.LLM{role: :user, content: "hello"}
-    ]
+    request = %Provider.Request{
+      messages: [
+        %Message.LLM{role: :system, content: "You are Nexus."},
+        %Message.LLM{role: :user, content: "hello"}
+      ]
+    }
 
     assert {:error, :missing_openai_compatible_model} =
-             OpenAICompatible.generate(messages, %{})
+             OpenAICompatible.generate(request, %{})
   end
 
   test "generate/2 maps Nexus messages to a chat completions request and returns text content" do
@@ -43,15 +46,17 @@ defmodule Nexus.Providers.OpenAICompatibleTest do
       request_fun: request_fun
     }
 
-    messages = [
-      %Message.LLM{role: :system, content: "System one."},
-      %Message.LLM{role: :user, content: "hello"},
-      %Message.LLM{role: :assistant, content: "previous answer"},
-      %Message.LLM{role: :user, content: "continue"}
-    ]
+    request = %Provider.Request{
+      messages: [
+        %Message.LLM{role: :system, content: "System one."},
+        %Message.LLM{role: :user, content: "hello"},
+        %Message.LLM{role: :assistant, content: "previous answer"},
+        %Message.LLM{role: :user, content: "continue"}
+      ]
+    }
 
-    assert {:ok, "hello from openai-compatible"} =
-             OpenAICompatible.generate(messages, config)
+    assert {:ok, %Provider.Result{content: "hello from openai-compatible"}} =
+             OpenAICompatible.generate(request, config)
 
     assert_received {:request_opts, opts}
 
@@ -91,12 +96,14 @@ defmodule Nexus.Providers.OpenAICompatibleTest do
        }}
     end
 
-    messages = [
-      %Message.LLM{role: :user, content: "hello"}
-    ]
+    request = %Provider.Request{
+      messages: [
+        %Message.LLM{role: :user, content: "hello"}
+      ]
+    }
 
-    assert {:ok, "hello from local server"} =
-             OpenAICompatible.generate(messages, %{
+    assert {:ok, %Provider.Result{content: "hello from local server"}} =
+             OpenAICompatible.generate(request, %{
                "model" => "openai/gpt-oss-20b",
                "base_url" => "http://localhost:1234/v1",
                request_fun: request_fun
@@ -130,12 +137,14 @@ defmodule Nexus.Providers.OpenAICompatibleTest do
        }}
     end
 
-    messages = [
-      %Message.LLM{role: :user, content: "hello"}
-    ]
+    request = %Provider.Request{
+      messages: [
+        %Message.LLM{role: :user, content: "hello"}
+      ]
+    }
 
-    assert {:ok, "hello with custom timeouts"} =
-             OpenAICompatible.generate(messages, %{
+    assert {:ok, %Provider.Result{content: "hello with custom timeouts"}} =
+             OpenAICompatible.generate(request, %{
                "model" => "nvidia/nemotron-3-nano-4b",
                "base_url" => "http://localhost:1234/v1",
                "request_options" => %{

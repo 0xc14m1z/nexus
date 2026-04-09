@@ -29,6 +29,7 @@ The repository currently includes:
   - file-backed `TranscriptStore`
   - a minimal `Tool` boundary
   - a first built-in tool: `CurrentTime`
+  - a structured provider boundary with `Provider.Request` and `Provider.Result`
 - architecture notes and implementation plans
 - project rules for step-by-step learning
 - architecture diagrams for the current structure and flow
@@ -61,8 +62,9 @@ flowchart LR
 4. The inbound user message is persisted in the transcript.
 5. The `AgentLoop` receives the current session transcript.
 6. The `ContextBuilder` turns the transcript into `Message.LLM[]`.
-7. The provider adapter generates assistant content.
-8. The `Orchestrator` persists the new transcript messages and builds `Message.Outbound`.
+7. The `AgentLoop` wraps those messages in `Provider.Request`.
+8. The provider adapter returns `Provider.Result`.
+9. The `Orchestrator` persists the new transcript messages and builds `Message.Outbound`.
 
 Provider-specific configuration is expected to come from external runtime
 configuration, not from the provider adapter itself.
@@ -76,6 +78,16 @@ Tool configuration is now split into two sources:
 
 At this stage, tools are configured and validated, but they are not yet wired
 into the provider or agent loop.
+
+The provider boundary is now already explicit:
+
+- `Provider.Request`
+  wraps the provider-facing `Message.LLM[]` for one call
+- `Provider.Result`
+  currently wraps only final assistant text
+
+That makes the contract easier to evolve later without passing loose arguments
+through the runtime.
 
 ## Run the Baseline
 
@@ -193,9 +205,8 @@ If you want to understand the runtime step by step, read these in order:
 
 ## Near-Term Goal
 
-The next implementation target is a tiny manual smoke path for the Anthropic
-provider on top of the file-backed stores, and it will continue to be built
-slowly and explicitly:
+The next implementation target is the first tool-aware provider result shape,
+still in small steps and still without jumping straight to a full tool loop:
 
 - one small file at a time
 - with explanations of purpose and structure

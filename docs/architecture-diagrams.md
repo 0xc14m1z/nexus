@@ -23,7 +23,9 @@ flowchart LR
     ContextBuilder[ContextBuilder]
     SystemPrompt[priv/prompts/system.md]
     LLMMessages[Message.LLM[]]
+    ProviderRequest[Provider.Request]
     Provider[Provider Adapter]
+    ProviderResult[Provider.Result]
     Result[AgentLoop.Result]
     Outbound[Message.Outbound]
 
@@ -44,8 +46,10 @@ flowchart LR
     AgentLoop --> ContextBuilder
     ContextBuilder --> SystemPrompt
     ContextBuilder --> LLMMessages
-    LLMMessages --> Provider
-    Provider --> ProviderInstance
+    LLMMessages --> ProviderRequest
+    ProviderRequest --> Provider
+    Provider --> ProviderResult
+    ProviderResult --> ProviderInstance
     ProviderInstance --> AgentLoop
     AgentLoop --> Result
     Result --> Orchestrator
@@ -87,10 +91,10 @@ sequenceDiagram
     O->>A: run(session_id, transcript, provider_instance)
     A->>B: build_messages(transcript)
     B-->>A: system + transcript as Message.LLM[]
-    A->>PI: generate(messages)
-    PI->>P: adapter.generate(messages, config)
-    P-->>PI: assistant content
-    PI-->>A: assistant content
+    A->>PI: generate(Provider.Request)
+    PI->>P: adapter.generate(request, config)
+    P-->>PI: Provider.Result
+    PI-->>A: Provider.Result
     A-->>O: AgentLoop.Result
     O->>TSI: append transcript messages from result
     TSI->>T: delegate
@@ -139,7 +143,7 @@ flowchart TD
 - `TranscriptStore`
   persists canonical session history
 - `Provider`
-  turns `Message.LLM[]` into assistant content
+  turns `Provider.Request` into `Provider.Result`
 - `Tool`
   exposes a provider-facing definition plus executable behavior
 
@@ -157,5 +161,5 @@ flowchart TD
 
 The next planned implementation step is:
 
-- use the new file-backed stores in a real manual Anthropic smoke path
-- then pressure-test the provider abstraction with a second real adapter
+- keep the provider contract structured while introducing the first tool-aware provider result
+- only after that, wire the first real tool round into the agent loop

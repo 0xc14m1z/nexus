@@ -9,7 +9,6 @@ defmodule Nexus.ProviderInstance do
   """
 
   alias Nexus.AdapterValidator
-  alias Nexus.Message
 
   @type t :: %__MODULE__{
           adapter: module(),
@@ -33,12 +32,13 @@ defmodule Nexus.ProviderInstance do
   end
 
   @doc """
-  Calls the provider instance with a list of LLM messages.
+  Calls the provider instance with a structured provider request.
   """
-  @spec generate(t(), [Message.LLM.t()]) :: {:ok, String.t()} | {:error, term()}
-  def generate(%__MODULE__{adapter: adapter, config: config}, messages) do
+  @spec generate(t(), Nexus.Provider.Request.t()) ::
+          {:ok, Nexus.Provider.Result.t()} | {:error, term()}
+  def generate(%__MODULE__{adapter: adapter, config: config}, %Nexus.Provider.Request{} = request) do
     with :ok <- AdapterValidator.validate_provider(adapter) do
-      adapter.generate(messages, config)
+      adapter.generate(request, config)
     end
   end
 end

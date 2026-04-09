@@ -10,15 +10,16 @@ defmodule Nexus.Providers.Fake do
   @behaviour Nexus.Provider
 
   alias Nexus.Message
+  alias Nexus.Provider
 
   @impl true
-  def generate(messages, _config) when is_list(messages) do
+  def generate(%Provider.Request{messages: messages}, _config) when is_list(messages) do
     rendered_messages =
       messages
       |> Enum.map(&render_message/1)
       |> Enum.join("\n\n")
 
-    {:ok, "Fake response: " <> rendered_messages}
+    {:ok, %Provider.Result{content: "Fake response: " <> rendered_messages}}
   end
 
   defp render_message(%Message.LLM{role: role, content: content}) do

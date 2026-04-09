@@ -2,6 +2,7 @@ defmodule Nexus.ProviderInstanceTest do
   use ExUnit.Case
 
   alias Nexus.ProviderInstance
+  alias Nexus.Provider
   alias Nexus.Message
   alias Nexus.Providers.Fake
 
@@ -17,12 +18,17 @@ defmodule Nexus.ProviderInstanceTest do
   test "generate/2 delegates to the configured adapter" do
     provider = %ProviderInstance{adapter: Fake, config: %{}}
 
-    messages = [
-      %Message.LLM{role: :system, content: "You are Nexus."},
-      %Message.LLM{role: :user, content: "hello nexus"}
-    ]
+    request = %Provider.Request{
+      messages: [
+        %Message.LLM{role: :system, content: "You are Nexus."},
+        %Message.LLM{role: :user, content: "hello nexus"}
+      ]
+    }
 
-    assert {:ok, "Fake response: System:\nYou are Nexus.\n\nUser:\nhello nexus"} =
-             ProviderInstance.generate(provider, messages)
+    assert {:ok,
+            %Provider.Result{
+              content: "Fake response: System:\nYou are Nexus.\n\nUser:\nhello nexus"
+            }} =
+             ProviderInstance.generate(provider, request)
   end
 end

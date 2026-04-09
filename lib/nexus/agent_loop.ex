@@ -18,6 +18,7 @@ defmodule Nexus.AgentLoop do
   alias Nexus.ContextBuilder
   alias Nexus.AgentLoop.Result
   alias Nexus.Message
+  alias Nexus.Provider
 
   @doc """
   Executes one minimal agent turn.
@@ -30,7 +31,8 @@ defmodule Nexus.AgentLoop do
   def run(session_id, transcript_messages, %ProviderInstance{} = provider) do
     with {:ok, session_id} <- validate_session_id(session_id),
          {:ok, messages} <- ContextBuilder.build_messages(transcript_messages),
-         {:ok, generated_text} <- ProviderInstance.generate(provider, messages) do
+         {:ok, %Provider.Result{content: generated_text}} <-
+           ProviderInstance.generate(provider, %Provider.Request{messages: messages}) do
       {:ok,
        %Result{
          assistant_content: generated_text,

@@ -16,6 +16,7 @@ defmodule Nexus.Providers.Anthropic do
   @behaviour Nexus.Provider
 
   alias Nexus.Message
+  alias Nexus.Provider
 
   @default_base_url "https://api.anthropic.com"
   @default_model "claude-sonnet-4-20250514"
@@ -23,12 +24,13 @@ defmodule Nexus.Providers.Anthropic do
   @anthropic_version "2023-06-01"
 
   @impl true
-  def generate(messages, config) when is_list(messages) and is_map(config) do
+  def generate(%Provider.Request{messages: messages}, config)
+      when is_list(messages) and is_map(config) do
     with {:ok, api_key} <- fetch_api_key(config),
          {:ok, body} <- build_request_body(messages, config),
          {:ok, response} <- post_messages(body, api_key, config),
          {:ok, generated_text} <- extract_text(response.body) do
-      {:ok, generated_text}
+      {:ok, %Provider.Result{content: generated_text}}
     end
   end
 

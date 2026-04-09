@@ -2,15 +2,18 @@ defmodule Nexus.Providers.AnthropicTest do
   use ExUnit.Case, async: false
 
   alias Nexus.Message
+  alias Nexus.Provider
   alias Nexus.Providers.Anthropic
 
   test "generate/2 returns an error when the api key is missing" do
-    messages = [
-      %Message.LLM{role: :system, content: "You are Nexus."},
-      %Message.LLM{role: :user, content: "hello"}
-    ]
+    request = %Provider.Request{
+      messages: [
+        %Message.LLM{role: :system, content: "You are Nexus."},
+        %Message.LLM{role: :user, content: "hello"}
+      ]
+    }
 
-    assert {:error, :missing_anthropic_api_key} = Anthropic.generate(messages, %{})
+    assert {:error, :missing_anthropic_api_key} = Anthropic.generate(request, %{})
   end
 
   test "generate/2 maps Nexus messages to an Anthropic request and returns text content" do
@@ -38,15 +41,18 @@ defmodule Nexus.Providers.AnthropicTest do
       request_fun: request_fun
     }
 
-    messages = [
-      %Message.LLM{role: :system, content: "System one."},
-      %Message.LLM{role: :system, content: "System two."},
-      %Message.LLM{role: :user, content: "hello"},
-      %Message.LLM{role: :assistant, content: "previous answer"},
-      %Message.LLM{role: :user, content: "continue"}
-    ]
+    request = %Provider.Request{
+      messages: [
+        %Message.LLM{role: :system, content: "System one."},
+        %Message.LLM{role: :system, content: "System two."},
+        %Message.LLM{role: :user, content: "hello"},
+        %Message.LLM{role: :assistant, content: "previous answer"},
+        %Message.LLM{role: :user, content: "continue"}
+      ]
+    }
 
-    assert {:ok, "hello from anthropic"} = Anthropic.generate(messages, config)
+    assert {:ok, %Provider.Result{content: "hello from anthropic"}} =
+             Anthropic.generate(request, config)
 
     assert_received {:request_opts, opts}
 
@@ -79,13 +85,15 @@ defmodule Nexus.Providers.AnthropicTest do
        }}
     end
 
-    messages = [
-      %Message.LLM{role: :system, content: "You are Nexus."},
-      %Message.LLM{role: :user, content: "hello"}
-    ]
+    request = %Provider.Request{
+      messages: [
+        %Message.LLM{role: :system, content: "You are Nexus."},
+        %Message.LLM{role: :user, content: "hello"}
+      ]
+    }
 
-    assert {:ok, "hello from string config"} =
-             Anthropic.generate(messages, %{
+    assert {:ok, %Provider.Result{content: "hello from string config"}} =
+             Anthropic.generate(request, %{
                "api_key" => "test-key",
                "model" => "claude-sonnet-4-20250514",
                "max_tokens" => 128,

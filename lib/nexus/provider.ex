@@ -6,24 +6,23 @@ defmodule Nexus.Provider do
 
   In this first version, the contract is intentionally small:
 
-  - the runtime sends a list of internal LLM messages
-  - the provider returns generated text as a string
+  - the runtime sends a structured `Provider.Request`
+  - the provider returns a structured `Provider.Result`
 
-  This keeps the role of the provider easy to understand before we introduce more
-  advanced concepts such as multi-message conversations, tool calls, or streaming.
+  The content is still text-only for now, but the explicit request/result
+  boundary gives the provider path a stable shape before we introduce tool
+  calls, richer metadata, or streaming.
   """
-
-  alias Nexus.Message
 
   @type config :: map()
 
   @doc """
-  Generates text from a list of LLM messages.
+  Generates provider output from a structured provider request.
 
   The provider does not know anything about channels or outbound runtime messages.
   Its job is only to take structured context plus already-resolved configuration
-  and return generated text.
+  and return provider output.
   """
-  @callback generate(messages :: [Message.LLM.t()], config :: config()) ::
-              {:ok, String.t()} | {:error, term()}
+  @callback generate(request :: Nexus.Provider.Request.t(), config :: config()) ::
+              {:ok, Nexus.Provider.Result.t()} | {:error, term()}
 end
