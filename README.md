@@ -186,6 +186,10 @@ If you want to understand the runtime step by step, read these in order:
 4. `lib/nexus/agent_loop.ex`
 5. `lib/nexus/context_builder.ex`
 6. `lib/nexus/provider.ex`
+7. `lib/nexus/runtime_config.ex`
+
+`RuntimeConfig` is now a small facade over focused helpers in
+`lib/nexus/runtime_config/`, so config-loading code no longer lives in one large file.
 
 ## Near-Term Goal
 

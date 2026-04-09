@@ -120,6 +120,8 @@ flowchart TD
   resolves the session, persists transcript boundaries, and coordinates one turn
 - `Nexus.run/2`
   reads runtime config, builds provider/session/transcript store instances, and delegates to the orchestrator
+- `RuntimeConfig`
+  stays the public config facade and delegates source loading, section normalization, and tool loading to smaller helpers
 - `ProviderInstance`
   wraps a provider adapter plus resolved config so the agent loop does not deal with setup concerns
 - `SessionStoreInstance`
