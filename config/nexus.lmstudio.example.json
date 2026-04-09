@@ -1,0 +1,22 @@
+{
+  "provider": {
+    "adapter": "Nexus.Providers.OpenAICompatible",
+    "config": {
+      "base_url": "http://localhost:1234/v1",
+      "model": "nvidia/nemotron-3-nano-4b",
+      "temperature": 0.7
+    }
+  },
+  "session_store": {
+    "adapter": "Nexus.SessionStores.File",
+    "config": {
+      "directory": "var/nexus/sessions"
+    }
+  },
+  "transcript_store": {
+    "adapter": "Nexus.TranscriptStores.File",
+    "config": {
+      "directory": "var/nexus/transcripts"
+    }
+  }
+}

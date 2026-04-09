@@ -22,6 +22,7 @@ The repository currently includes:
   - `ContextBuilder`
   - `FakeProvider`
   - `AnthropicProvider` (minimal, non-streaming)
+  - `OpenAICompatibleProvider` (minimal, chat-completions based)
   - in-memory `SessionStore`
   - in-memory `TranscriptStore`
   - file-backed `SessionStore`
@@ -112,6 +113,36 @@ runtime config at `config/nexus.local.json`. Example:
 
 `Nexus` will read `config/nexus.local.json` first, then `config/nexus.json`,
 and only fall back to application config if no JSON config file is present.
+
+For LM Studio, a local config can use the OpenAI-compatible adapter. Example:
+
+```json
+{
+  "provider": {
+    "adapter": "Nexus.Providers.OpenAICompatible",
+    "config": {
+      "base_url": "http://localhost:1234/v1",
+      "model": "nvidia/nemotron-3-nano-4b",
+      "temperature": 0.7
+    }
+  },
+  "session_store": {
+    "adapter": "Nexus.SessionStores.File",
+    "config": {
+      "directory": "var/nexus/sessions"
+    }
+  },
+  "transcript_store": {
+    "adapter": "Nexus.TranscriptStores.File",
+    "config": {
+      "directory": "var/nexus/transcripts"
+    }
+  }
+}
+```
+
+You can also copy [nexus.lmstudio.example.json](/Users/morgandam/Documents/repos/nexus/config/nexus.lmstudio.example.json)
+to `config/nexus.local.json`.
 
 With that setup, these two separate commands can share the same persisted
 history:
