@@ -58,6 +58,9 @@ The current working architecture is:
 - runtime events go to `RuntimeEventStore`
 - sessions and transcript go to dedicated stores
 - Phoenix should inspect structured persisted data, not parse raw logs
+- runtime-level observability should be emitted through `:telemetry`
+- channels may render or expose debug data, but they should not be the place where
+  runtime observability originates
 
 ## Implementation Method
 

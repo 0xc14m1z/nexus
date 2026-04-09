@@ -92,6 +92,13 @@ The system will be designed in these runtime layers:
 9. `Hooks / Telemetry`
    Exposes observability and controlled extension points around runtime events.
 
+Observability note:
+
+- structured runtime observability should be emitted from the runtime layers via
+  `:telemetry`
+- channels may display or forward those diagnostics, but should not be the
+  primary source of structured runtime events
+
 ## Recommended Implementation Order
 
 The order below intentionally differs slightly from the original brief.
