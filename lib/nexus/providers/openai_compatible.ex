@@ -6,7 +6,7 @@ defmodule Nexus.Providers.OpenAICompatible do
 
   - it calls `/chat/completions`
   - it supports only text-only `Message.LLM` inputs
-  - it returns only the first assistant message content
+  - it returns either final assistant text or a tool request
 
   The goal is to support local servers such as LM Studio, Ollama's OpenAI
   compatibility layer, and similar runtimes without coupling Nexus to one
@@ -27,8 +27,8 @@ defmodule Nexus.Providers.OpenAICompatible do
     with {:ok, model} <- fetch_model(config),
          {:ok, body} <- build_request_body(messages, model, config),
          {:ok, response} <- post_chat_completions(body, config),
-         {:ok, generated_text} <- extract_text(response.body) do
-      {:ok, %Provider.Result{content: generated_text}}
+         {:ok, result} <- extract_result(response.body) do
+      {:ok, result}
     end
   end
 
@@ -108,14 +108,21 @@ defmodule Nexus.Providers.OpenAICompatible do
     end
   end
 
-  # The first implementation extracts only the first assistant text because the
-  # current Nexus provider contract returns one final string.
-  defp extract_text(%{"choices" => [%{"message" => %{"content" => content}} | _rest]})
-       when is_binary(content) and content != "" do
-    {:ok, content}
+  # Tool-capable OpenAI-compatible models return tool calls in the assistant
+  # message. We normalize them now even though the agent loop does not execute
+  # them yet, so the provider boundary can evolve independently from the loop.
+  defp extract_result(%{"choices" => [%{"message" => %{"tool_calls" => tool_calls}} | _rest]})
+       when is_list(tool_calls) and tool_calls != [] do
+    build_tool_request(tool_calls)
   end
 
-  defp extract_text(%{"choices" => [%{"message" => %{"content" => parts}} | _rest]})
+  # Final assistant text remains the common success case for text-only turns.
+  defp extract_result(%{"choices" => [%{"message" => %{"content" => content}} | _rest]})
+       when is_binary(content) and content != "" do
+    {:ok, %Provider.Result.Text{content: content}}
+  end
+
+  defp extract_result(%{"choices" => [%{"message" => %{"content" => parts}} | _rest]})
        when is_list(parts) do
     text =
       parts
@@ -125,12 +132,51 @@ defmodule Nexus.Providers.OpenAICompatible do
 
     case text do
       "" -> {:error, :openai_compatible_response_missing_text}
-      value -> {:ok, value}
+      value -> {:ok, %Provider.Result.Text{content: value}}
     end
   end
 
-  defp extract_text(_response_body) do
+  defp extract_result(_response_body) do
     {:error, :invalid_openai_compatible_response}
+  end
+
+  # Tool-call arguments arrive as JSON strings in the wire format, so we
+  # normalize them into maps before they cross the provider boundary.
+  defp build_tool_request(tool_calls) do
+    Enum.reduce_while(tool_calls, {:ok, []}, fn tool_call, {:ok, acc} ->
+      case normalize_tool_call(tool_call) do
+        {:ok, normalized_tool_call} -> {:cont, {:ok, [normalized_tool_call | acc]}}
+        {:error, reason} -> {:halt, {:error, reason}}
+      end
+    end)
+    |> case do
+      {:ok, normalized_tool_calls} ->
+        {:ok, %Provider.Result.ToolRequest{tool_calls: Enum.reverse(normalized_tool_calls)}}
+
+      error ->
+        error
+    end
+  end
+
+  defp normalize_tool_call(%{
+         "id" => id,
+         "function" => %{"name" => name, "arguments" => arguments_json}
+       })
+       when is_binary(id) and is_binary(name) and is_binary(arguments_json) do
+    case Jason.decode(arguments_json) do
+      {:ok, arguments} when is_map(arguments) ->
+        {:ok, %{id: id, name: name, arguments: arguments}}
+
+      {:ok, _arguments} ->
+        {:error, :invalid_openai_compatible_tool_arguments}
+
+      {:error, _reason} ->
+        {:error, :invalid_openai_compatible_tool_arguments}
+    end
+  end
+
+  defp normalize_tool_call(_tool_call) do
+    {:error, :invalid_openai_compatible_tool_call}
   end
 
   # These accessors keep the string/atom key normalization in one place so the

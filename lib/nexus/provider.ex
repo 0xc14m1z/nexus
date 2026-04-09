@@ -9,9 +9,9 @@ defmodule Nexus.Provider do
   - the runtime sends a structured `Provider.Request`
   - the provider returns a structured `Provider.Result`
 
-  The content is still text-only for now, but the explicit request/result
-  boundary gives the provider path a stable shape before we introduce tool
-  calls, richer metadata, or streaming.
+  The request is still text-only for now, but the explicit request/result
+  boundary gives the provider path a stable shape before we introduce richer
+  metadata, tool execution, or streaming.
   """
 
   @type config :: map()

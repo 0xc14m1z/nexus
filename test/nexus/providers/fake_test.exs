@@ -14,7 +14,7 @@ defmodule Nexus.Providers.FakeTest do
     }
 
     assert {:ok,
-            %Provider.Result{
+            %Provider.Result.Text{
               content: "Fake response: System:\nYou are Nexus.\n\nUser:\nhello nexus"
             }} =
              Fake.generate(request, %{})

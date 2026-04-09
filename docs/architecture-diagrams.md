@@ -25,7 +25,7 @@ flowchart LR
     LLMMessages[Message.LLM[]]
     ProviderRequest[Provider.Request]
     Provider[Provider Adapter]
-    ProviderResult[Provider.Result]
+    ProviderResult[Provider.Result.Text<br/>or Provider.Result.ToolRequest]
     Result[AgentLoop.Result]
     Outbound[Message.Outbound]
 
@@ -149,11 +149,13 @@ flowchart TD
 
 ## Current Limitations
 
-- tools are configured and validated, but they are not yet connected to the provider path or the agent loop
+- tools are configured and validated, but they are not yet executed by the agent loop
 - `ContextBuilder` currently supports only transcript messages of type:
   - `Message.Transcript.User`
   - `Message.Transcript.Assistant`
 - tool-related transcript messages are defined, but not yet consumed by the builder
+- `OpenAICompatible` can already surface tool requests through `Provider.Result.ToolRequest`,
+  but the current loop still rejects them explicitly
 - the current provider path is still synchronous and non-streaming
 - the default runtime config still uses in-memory stores and the fake provider
 
@@ -161,5 +163,5 @@ flowchart TD
 
 The next planned implementation step is:
 
-- keep the provider contract structured while introducing the first tool-aware provider result
-- only after that, wire the first real tool round into the agent loop
+- wire the first real tool round into the agent loop
+- then teach the transcript and context builder how to carry tool-related messages

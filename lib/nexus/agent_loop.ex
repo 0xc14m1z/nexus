@@ -31,19 +31,9 @@ defmodule Nexus.AgentLoop do
   def run(session_id, transcript_messages, %ProviderInstance{} = provider) do
     with {:ok, session_id} <- validate_session_id(session_id),
          {:ok, messages} <- ContextBuilder.build_messages(transcript_messages),
-         {:ok, %Provider.Result{content: generated_text}} <-
+         {:ok, provider_result} <-
            ProviderInstance.generate(provider, %Provider.Request{messages: messages}) do
-      {:ok,
-       %Result{
-         assistant_content: generated_text,
-         llm_messages: messages,
-         transcript_messages: [
-           %Message.Transcript.Assistant{
-             session_id: session_id,
-             content: generated_text
-           }
-         ]
-       }}
+      build_loop_result(session_id, messages, provider_result)
     end
   end
 
@@ -55,4 +45,27 @@ defmodule Nexus.AgentLoop do
   # before delegating the turn to the agent loop.
   defp validate_session_id(session_id) when is_binary(session_id), do: {:ok, session_id}
   defp validate_session_id(_session_id), do: {:error, :missing_session_id}
+
+  # Text results are still the only branch the loop knows how to turn into a
+  # final assistant reply. Tool requests are modeled already, but execution
+  # support will arrive in the next slice.
+  defp build_loop_result(session_id, messages, %Provider.Result.Text{content: generated_text}) do
+    {:ok,
+     %Result{
+       assistant_content: generated_text,
+       llm_messages: messages,
+       transcript_messages: [
+         %Message.Transcript.Assistant{
+           session_id: session_id,
+           content: generated_text
+         }
+       ]
+     }}
+  end
+
+  defp build_loop_result(_session_id, _messages, %Provider.Result.ToolRequest{
+         tool_calls: tool_calls
+       }) do
+    {:error, {:tool_requests_not_supported, tool_calls}}
+  end
 end

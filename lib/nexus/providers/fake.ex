@@ -19,7 +19,7 @@ defmodule Nexus.Providers.Fake do
       |> Enum.map(&render_message/1)
       |> Enum.join("\n\n")
 
-    {:ok, %Provider.Result{content: "Fake response: " <> rendered_messages}}
+    {:ok, %Provider.Result.Text{content: "Fake response: " <> rendered_messages}}
   end
 
   defp render_message(%Message.LLM{role: role, content: content}) do

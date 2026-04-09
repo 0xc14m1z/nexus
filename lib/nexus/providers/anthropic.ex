@@ -7,7 +7,7 @@ defmodule Nexus.Providers.Anthropic do
   - it calls the Messages API
   - it supports only text-only `Message.LLM` inputs
   - it maps Nexus system messages to Anthropic's top-level `system` field
-  - it returns only the concatenated assistant text
+  - it returns either concatenated assistant text or a tool request
 
   All configuration must be passed in from the outside. This keeps environment
   lookup and application bootstrapping out of the provider adapter itself.
@@ -29,8 +29,8 @@ defmodule Nexus.Providers.Anthropic do
     with {:ok, api_key} <- fetch_api_key(config),
          {:ok, body} <- build_request_body(messages, config),
          {:ok, response} <- post_messages(body, api_key, config),
-         {:ok, generated_text} <- extract_text(response.body) do
-      {:ok, %Provider.Result{content: generated_text}}
+         {:ok, result} <- extract_result(response.body) do
+      {:ok, result}
     end
   end
 
@@ -104,9 +104,65 @@ defmodule Nexus.Providers.Anthropic do
     end
   end
 
-  # Anthropic returns an array of content blocks. For the current text-only
-  # path, we concatenate all text blocks into the final assistant content.
-  defp extract_text(%{"content" => blocks}) when is_list(blocks) do
+  defp extract_result(%{"content" => blocks}) when is_list(blocks) do
+    case build_tool_request(blocks) do
+      {:ok, %Provider.Result.ToolRequest{} = tool_request} ->
+        {:ok, tool_request}
+
+      :no_tool_use ->
+        build_text_result(blocks)
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  defp extract_result(_response_body) do
+    {:error, :invalid_anthropic_response}
+  end
+
+  # When Anthropic returns one or more `tool_use` blocks, they become the
+  # provider result for this turn and the agent loop decides what to do next.
+  defp build_tool_request(blocks) do
+    tool_calls =
+      blocks
+      |> Enum.filter(&match?(%{"type" => "tool_use"}, &1))
+      |> Enum.map(&normalize_tool_use/1)
+
+    cond do
+      tool_calls == [] ->
+        :no_tool_use
+
+      Enum.all?(tool_calls, &match?({:ok, _}, &1)) ->
+        {:ok,
+         %Provider.Result.ToolRequest{
+           tool_calls:
+             tool_calls
+             |> Enum.map(fn {:ok, tool_call} -> tool_call end)
+         }}
+
+      true ->
+        {:error, :invalid_anthropic_tool_use}
+    end
+  end
+
+  defp normalize_tool_use(%{
+         "type" => "tool_use",
+         "id" => id,
+         "name" => name,
+         "input" => input
+       })
+       when is_binary(id) and is_binary(name) and is_map(input) do
+    {:ok, %{id: id, name: name, arguments: input}}
+  end
+
+  defp normalize_tool_use(_tool_use) do
+    {:error, :invalid_anthropic_tool_use}
+  end
+
+  # If no tool request is present, Anthropic content blocks collapse to the
+  # assistant text we already used before this slice.
+  defp build_text_result(blocks) do
     text =
       blocks
       |> Enum.filter(&match?(%{"type" => "text", "text" => _}, &1))
@@ -115,12 +171,8 @@ defmodule Nexus.Providers.Anthropic do
 
     case text do
       "" -> {:error, :anthropic_response_missing_text}
-      text -> {:ok, text}
+      text -> {:ok, %Provider.Result.Text{content: text}}
     end
-  end
-
-  defp extract_text(_response_body) do
-    {:error, :invalid_anthropic_response}
   end
 
   # These small accessors keep defaults in one place and hide the atom/string

@@ -4,8 +4,25 @@ defmodule Nexus.AgentLoopTest do
   alias Nexus.AgentLoop
   alias Nexus.AgentLoop.Result
   alias Nexus.Message
+  alias Nexus.Provider
   alias Nexus.ProviderInstance
   alias Nexus.Providers.Fake
+
+  defmodule ToolRequestProvider do
+    @behaviour Nexus.Provider
+
+    alias Nexus.Provider
+
+    @impl true
+    def generate(%Provider.Request{}, _config) do
+      {:ok,
+       %Provider.Result.ToolRequest{
+         tool_calls: [
+           %{id: "call_123", name: "current_time", arguments: %{}}
+         ]
+       }}
+    end
+  end
 
   test "run/3 converts transcript history into assistant content through the provider" do
     transcript_messages = [
@@ -78,5 +95,23 @@ defmodule Nexus.AgentLoopTest do
 
     assert {:error, {:invalid_provider_reference, Fake}} =
              AgentLoop.run("session_123", transcript_messages, Fake)
+  end
+
+  test "run/3 returns an explicit error when the provider requests tools" do
+    transcript_messages = [
+      %Message.Transcript.User{
+        session_id: "session_123",
+        content: "what time is it?"
+      }
+    ]
+
+    assert {:error,
+            {:tool_requests_not_supported,
+             [%{id: "call_123", name: "current_time", arguments: %{}}]}} =
+             AgentLoop.run(
+               "session_123",
+               transcript_messages,
+               %ProviderInstance{adapter: ToolRequestProvider, config: %{}}
+             )
   end
 end

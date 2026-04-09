@@ -55,7 +55,7 @@ defmodule Nexus.Providers.OpenAICompatibleTest do
       ]
     }
 
-    assert {:ok, %Provider.Result{content: "hello from openai-compatible"}} =
+    assert {:ok, %Provider.Result.Text{content: "hello from openai-compatible"}} =
              OpenAICompatible.generate(request, config)
 
     assert_received {:request_opts, opts}
@@ -102,7 +102,7 @@ defmodule Nexus.Providers.OpenAICompatibleTest do
       ]
     }
 
-    assert {:ok, %Provider.Result{content: "hello from local server"}} =
+    assert {:ok, %Provider.Result.Text{content: "hello from local server"}} =
              OpenAICompatible.generate(request, %{
                "model" => "openai/gpt-oss-20b",
                "base_url" => "http://localhost:1234/v1",
@@ -143,7 +143,7 @@ defmodule Nexus.Providers.OpenAICompatibleTest do
       ]
     }
 
-    assert {:ok, %Provider.Result{content: "hello with custom timeouts"}} =
+    assert {:ok, %Provider.Result.Text{content: "hello with custom timeouts"}} =
              OpenAICompatible.generate(request, %{
                "model" => "nvidia/nemotron-3-nano-4b",
                "base_url" => "http://localhost:1234/v1",
@@ -158,5 +158,50 @@ defmodule Nexus.Providers.OpenAICompatibleTest do
 
     assert Keyword.fetch!(opts, :receive_timeout) == 30_000
     assert Keyword.fetch!(opts, :connect_options) == %{"timeout" => 5_000}
+  end
+
+  test "generate/2 returns a tool-request result when the model asks for tools" do
+    request_fun = fn _opts ->
+      {:ok,
+       %Req.Response{
+         status: 200,
+         body: %{
+           "choices" => [
+             %{
+               "message" => %{
+                 "tool_calls" => [
+                   %{
+                     "id" => "call_123",
+                     "type" => "function",
+                     "function" => %{
+                       "name" => "current_time",
+                       "arguments" => "{}"
+                     }
+                   }
+                 ]
+               }
+             }
+           ]
+         }
+       }}
+    end
+
+    request = %Provider.Request{
+      messages: [
+        %Message.LLM{role: :user, content: "What time is it?"}
+      ]
+    }
+
+    assert {:ok,
+            %Provider.Result.ToolRequest{
+              tool_calls: [
+                %{id: "call_123", name: "current_time", arguments: %{}}
+              ]
+            }} =
+             OpenAICompatible.generate(request, %{
+               "model" => "nvidia/nemotron-3-nano-4b",
+               "base_url" => "http://localhost:1234/v1",
+               request_fun: request_fun
+             })
   end
 end

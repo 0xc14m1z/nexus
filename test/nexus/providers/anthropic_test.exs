@@ -51,7 +51,7 @@ defmodule Nexus.Providers.AnthropicTest do
       ]
     }
 
-    assert {:ok, %Provider.Result{content: "hello from anthropic"}} =
+    assert {:ok, %Provider.Result.Text{content: "hello from anthropic"}} =
              Anthropic.generate(request, config)
 
     assert_received {:request_opts, opts}
@@ -92,11 +92,48 @@ defmodule Nexus.Providers.AnthropicTest do
       ]
     }
 
-    assert {:ok, %Provider.Result{content: "hello from string config"}} =
+    assert {:ok, %Provider.Result.Text{content: "hello from string config"}} =
              Anthropic.generate(request, %{
                "api_key" => "test-key",
                "model" => "claude-sonnet-4-20250514",
                "max_tokens" => 128,
+               request_fun: request_fun
+             })
+  end
+
+  test "generate/2 returns a tool-request result when Anthropic asks for tools" do
+    request_fun = fn _opts ->
+      {:ok,
+       %Req.Response{
+         status: 200,
+         body: %{
+           "content" => [
+             %{
+               "type" => "tool_use",
+               "id" => "toolu_123",
+               "name" => "current_time",
+               "input" => %{}
+             }
+           ]
+         }
+       }}
+    end
+
+    request = %Provider.Request{
+      messages: [
+        %Message.LLM{role: :user, content: "what time is it?"}
+      ]
+    }
+
+    assert {:ok,
+            %Provider.Result.ToolRequest{
+              tool_calls: [
+                %{id: "toolu_123", name: "current_time", arguments: %{}}
+              ]
+            }} =
+             Anthropic.generate(request, %{
+               "api_key" => "test-key",
+               "model" => "claude-sonnet-4-20250514",
                request_fun: request_fun
              })
   end

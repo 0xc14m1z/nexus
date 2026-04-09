@@ -1,15 +1,16 @@
 defmodule Nexus.Provider.Result do
   @moduledoc """
-  Structured output returned by a provider adapter.
+  Union type for provider outputs.
 
-  The first version still models only final assistant text, but returning a
-  struct now gives us a clear place to grow when providers start requesting
-  tools or exposing richer response metadata.
+  Provider results model the immediate outcome of a single provider call before
+  the runtime decides how to react. The first useful split is between:
+
+  - final assistant text
+  - a request to execute one or more tools
   """
 
-  @type t :: %__MODULE__{
-          content: String.t()
-        }
+  alias Nexus.Provider.Result.Text
+  alias Nexus.Provider.Result.ToolRequest
 
-  defstruct [:content]
+  @type t :: Text.t() | ToolRequest.t()
 end

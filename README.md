@@ -7,7 +7,7 @@ The project is currently in the first implementation phase:
 
 - architecture and terminology are being stabilized
 - a minimal end-to-end synchronous runtime path exists
-- the next goal is the first real-provider smoke test
+- the next goal is the first real tool round through the agent loop
 
 ## Current Status
 
@@ -29,7 +29,7 @@ The repository currently includes:
   - file-backed `TranscriptStore`
   - a minimal `Tool` boundary
   - a first built-in tool: `CurrentTime`
-  - a structured provider boundary with `Provider.Request` and `Provider.Result`
+  - a structured provider boundary with `Provider.Request` and typed `Provider.Result.*`
 - architecture notes and implementation plans
 - project rules for step-by-step learning
 - architecture diagrams for the current structure and flow
@@ -63,7 +63,7 @@ flowchart LR
 5. The `AgentLoop` receives the current session transcript.
 6. The `ContextBuilder` turns the transcript into `Message.LLM[]`.
 7. The `AgentLoop` wraps those messages in `Provider.Request`.
-8. The provider adapter returns `Provider.Result`.
+8. The provider adapter returns `Provider.Result.Text` or `Provider.Result.ToolRequest`.
 9. The `Orchestrator` persists the new transcript messages and builds `Message.Outbound`.
 
 Provider-specific configuration is expected to come from external runtime
@@ -76,18 +76,24 @@ Tool configuration is now split into two sources:
 - `tools`
   tools explicitly added through runtime JSON config
 
-At this stage, tools are configured and validated, but they are not yet wired
-into the provider or agent loop.
+At this stage, tools are configured and validated, and provider results can ask
+for them, but they are not yet executed by the agent loop.
 
 The provider boundary is now already explicit:
 
 - `Provider.Request`
   wraps the provider-facing `Message.LLM[]` for one call
-- `Provider.Result`
-  currently wraps only final assistant text
+- `Provider.Result.Text`
+  wraps final assistant text
+- `Provider.Result.ToolRequest`
+  wraps one or more requested tool calls
 
 That makes the contract easier to evolve later without passing loose arguments
 through the runtime.
+
+The runtime still supports only text results end to end. If a provider returns
+`Provider.Result.ToolRequest`, the current `AgentLoop` fails explicitly with a
+clear error until tool execution is wired in.
 
 ## Run the Baseline
 
@@ -205,8 +211,8 @@ If you want to understand the runtime step by step, read these in order:
 
 ## Near-Term Goal
 
-The next implementation target is the first tool-aware provider result shape,
-still in small steps and still without jumping straight to a full tool loop:
+The next implementation target is the first real tool round in the agent loop,
+now that the provider boundary can already express tool requests:
 
 - one small file at a time
 - with explanations of purpose and structure
