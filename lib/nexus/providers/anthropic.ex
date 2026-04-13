@@ -24,10 +24,10 @@ defmodule Nexus.Providers.Anthropic do
   @anthropic_version "2023-06-01"
 
   @impl true
-  def generate(%Provider.Request{messages: messages}, config)
-      when is_list(messages) and is_map(config) do
+  def generate(%Provider.Request{messages: messages, tools: tools}, config)
+      when is_list(messages) and is_list(tools) and is_map(config) do
     with {:ok, api_key} <- fetch_api_key(config),
-         {:ok, body} <- build_request_body(messages, config),
+         {:ok, body} <- build_request_body(messages, tools, config),
          {:ok, response} <- post_messages(body, api_key, config),
          {:ok, result} <- extract_result(response.body) do
       {:ok, result}
@@ -45,7 +45,7 @@ defmodule Nexus.Providers.Anthropic do
 
   # Anthropic accepts a single initial system prompt, so multiple Nexus system
   # messages are concatenated before sending the request.
-  defp build_request_body(messages, config) do
+  defp build_request_body(messages, tools, config) do
     {system_messages, conversation_messages} =
       Enum.split_with(messages, &(&1.role == :system))
 
@@ -55,9 +55,15 @@ defmodule Nexus.Providers.Anthropic do
       "messages" => Enum.map(conversation_messages, &message_to_payload/1)
     }
 
-    case build_system_prompt(system_messages) do
-      nil -> {:ok, body}
-      system_prompt -> {:ok, Map.put(body, "system", system_prompt)}
+    body =
+      case build_system_prompt(system_messages) do
+        nil -> body
+        system_prompt -> Map.put(body, "system", system_prompt)
+      end
+
+    case build_tools_payload(tools) do
+      [] -> {:ok, body}
+      payload -> {:ok, Map.put(body, "tools", payload)}
     end
   end
 
@@ -173,6 +179,18 @@ defmodule Nexus.Providers.Anthropic do
       "" -> {:error, :anthropic_response_missing_text}
       text -> {:ok, %Provider.Result.Text{content: text}}
     end
+  end
+
+  # Anthropic expects tools as plain objects with `name`, `description`, and
+  # `input_schema`, so the generic Nexus tool definition maps directly here.
+  defp build_tools_payload(tools) when is_list(tools) do
+    Enum.map(tools, fn tool ->
+      %{
+        "name" => tool.name,
+        "description" => tool.description,
+        "input_schema" => tool.input_schema
+      }
+    end)
   end
 
   # These small accessors keep defaults in one place and hide the atom/string

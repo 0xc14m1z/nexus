@@ -19,6 +19,7 @@ flowchart LR
     SessionStore[SessionStore]
     TranscriptStore[TranscriptStore]
     ProviderInstance[ProviderInstance]
+    ToolInstance[ToolInstance[]]
     AgentLoop[AgentLoop]
     ContextBuilder[ContextBuilder]
     SystemPrompt[priv/prompts/system.md]
@@ -35,6 +36,7 @@ flowchart LR
     Runtime --> SessionStoreInstance
     Runtime --> TranscriptStoreInstance
     Runtime --> ProviderInstance
+    Runtime --> ToolInstance
     Runtime --> Orchestrator
     Orchestrator --> SessionStoreInstance
     Orchestrator --> TranscriptStoreInstance
@@ -42,6 +44,7 @@ flowchart LR
     TranscriptStoreInstance --> TranscriptStore
     ProviderInstance --> Provider
     Orchestrator --> AgentLoop
+    ToolInstance --> AgentLoop
     TranscriptStore --> AgentLoop
     AgentLoop --> ContextBuilder
     ContextBuilder --> SystemPrompt
@@ -79,7 +82,7 @@ sequenceDiagram
     R->>PI: build provider instance from runtime config
     R->>SSI: build session store instance
     R->>TSI: build transcript store instance
-    R->>O: run(inbound, provider_instance, session_store_instance, transcript_store_instance)
+    R->>O: run(inbound, provider_instance, session_store_instance, transcript_store_instance, tool_instances)
     O->>SSI: get/save session
     SSI->>S: delegate
     S-->>O: session
@@ -88,7 +91,7 @@ sequenceDiagram
     O->>TSI: list_by_session(session_id)
     TSI->>T: delegate
     T-->>O: transcript history
-    O->>A: run(session_id, transcript, provider_instance)
+    O->>A: run(session_id, transcript, provider_instance, tool_instances)
     A->>B: build_messages(transcript)
     B-->>A: system + transcript as Message.LLM[]
     A->>PI: generate(Provider.Request)
@@ -123,7 +126,7 @@ flowchart TD
 - `Orchestrator`
   resolves the session, persists transcript boundaries, and coordinates one turn
 - `Nexus.run/2`
-  reads runtime config, builds provider/session/transcript store instances, and delegates to the orchestrator
+  reads runtime config, builds provider/session/transcript store instances plus tool instances, and delegates to the orchestrator
 - `RuntimeConfig`
   stays the public config facade and delegates source loading, section normalization, and tool loading to smaller helpers
 - `ProviderInstance`
@@ -135,7 +138,7 @@ flowchart TD
 - `ToolInstance`
   wraps one configured tool adapter and records whether it came from `system_tools` or runtime `tools`
 - `AgentLoop`
-  executes one turn against the provider and returns assistant output plus transcript items
+  executes one turn against the provider, including available tool definitions in the provider request, and returns assistant output plus transcript items
 - `ContextBuilder`
   turns persisted transcript into provider-facing `Message.LLM[]`
 - `SessionStore`
@@ -149,7 +152,7 @@ flowchart TD
 
 ## Current Limitations
 
-- tools are configured and validated, but they are not yet executed by the agent loop
+- tools are configured, validated, and exposed to providers, but they are not yet executed by the agent loop
 - `ContextBuilder` currently supports only transcript messages of type:
   - `Message.Transcript.User`
   - `Message.Transcript.Assistant`

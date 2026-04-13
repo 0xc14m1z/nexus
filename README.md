@@ -30,6 +30,7 @@ The repository currently includes:
   - a minimal `Tool` boundary
   - a first built-in tool: `CurrentTime`
   - a structured provider boundary with `Provider.Request` and typed `Provider.Result.*`
+  - runtime-configured tools flowing into provider requests
 - architecture notes and implementation plans
 - project rules for step-by-step learning
 - architecture diagrams for the current structure and flow
@@ -57,12 +58,12 @@ flowchart LR
 ## How One Turn Works
 
 1. A channel normalizes external input into `Message.Inbound`.
-2. `Nexus.run/2` resolves `ProviderInstance`, `SessionStoreInstance`, and `TranscriptStoreInstance` from runtime configuration.
+2. `Nexus.run/2` resolves `ProviderInstance`, `SessionStoreInstance`, `TranscriptStoreInstance`, and configured tools from runtime configuration.
 3. The `Orchestrator` resolves or creates the session.
 4. The inbound user message is persisted in the transcript.
 5. The `AgentLoop` receives the current session transcript.
 6. The `ContextBuilder` turns the transcript into `Message.LLM[]`.
-7. The `AgentLoop` wraps those messages in `Provider.Request`.
+7. The `AgentLoop` wraps those messages plus the available tool definitions in `Provider.Request`.
 8. The provider adapter returns `Provider.Result.Text` or `Provider.Result.ToolRequest`.
 9. The `Orchestrator` persists the new transcript messages and builds `Message.Outbound`.
 
@@ -82,7 +83,7 @@ for them, but they are not yet executed by the agent loop.
 The provider boundary is now already explicit:
 
 - `Provider.Request`
-  wraps the provider-facing `Message.LLM[]` for one call
+  wraps the provider-facing `Message.LLM[]` plus the available tool definitions for one call
 - `Provider.Result.Text`
   wraps final assistant text
 - `Provider.Result.ToolRequest`

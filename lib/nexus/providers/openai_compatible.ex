@@ -22,10 +22,10 @@ defmodule Nexus.Providers.OpenAICompatible do
   @default_temperature 0.7
 
   @impl true
-  def generate(%Provider.Request{messages: messages}, config)
-      when is_list(messages) and is_map(config) do
+  def generate(%Provider.Request{messages: messages, tools: tools}, config)
+      when is_list(messages) and is_list(tools) and is_map(config) do
     with {:ok, model} <- fetch_model(config),
-         {:ok, body} <- build_request_body(messages, model, config),
+         {:ok, body} <- build_request_body(messages, tools, model, config),
          {:ok, response} <- post_chat_completions(body, config),
          {:ok, result} <- extract_result(response.body) do
       {:ok, result}
@@ -43,13 +43,17 @@ defmodule Nexus.Providers.OpenAICompatible do
 
   # The wire format stays close to OpenAI-compatible chat APIs so the adapter
   # remains a thin translation layer from Nexus messages to HTTP payload.
-  defp build_request_body(messages, model, config) do
-    {:ok,
-     %{
-       "model" => model,
-       "messages" => Enum.map(messages, &message_to_payload/1),
-       "temperature" => temperature(config)
-     }}
+  defp build_request_body(messages, tools, model, config) do
+    body = %{
+      "model" => model,
+      "messages" => Enum.map(messages, &message_to_payload/1),
+      "temperature" => temperature(config)
+    }
+
+    case build_tools_payload(tools) do
+      [] -> {:ok, body}
+      payload -> {:ok, Map.put(body, "tools", payload)}
+    end
   end
 
   defp message_to_payload(%Message.LLM{role: role, content: content}) do
@@ -177,6 +181,21 @@ defmodule Nexus.Providers.OpenAICompatible do
 
   defp normalize_tool_call(_tool_call) do
     {:error, :invalid_openai_compatible_tool_call}
+  end
+
+  # OpenAI-compatible tool declarations wrap each generic Nexus tool
+  # definition in a `type=function` envelope with JSON Schema parameters.
+  defp build_tools_payload(tools) when is_list(tools) do
+    Enum.map(tools, fn tool ->
+      %{
+        "type" => "function",
+        "function" => %{
+          "name" => tool.name,
+          "description" => tool.description,
+          "parameters" => tool.input_schema
+        }
+      }
+    end)
   end
 
   # These accessors keep the string/atom key normalization in one place so the

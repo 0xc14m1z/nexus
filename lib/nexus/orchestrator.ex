@@ -16,6 +16,7 @@ defmodule Nexus.Orchestrator do
   alias Nexus.ProviderInstance
   alias Nexus.Session
   alias Nexus.SessionStoreInstance
+  alias Nexus.ToolInstance
   alias Nexus.TranscriptStoreInstance
 
   @doc """
@@ -25,22 +26,26 @@ defmodule Nexus.Orchestrator do
           Message.Inbound.t(),
           ProviderInstance.t(),
           SessionStoreInstance.t(),
-          TranscriptStoreInstance.t()
+          TranscriptStoreInstance.t(),
+          [ToolInstance.t()]
         ) ::
           {:ok, Message.Outbound.t()} | {:error, term()}
   def run(
         %Message.Inbound{} = inbound,
         %ProviderInstance{} = provider,
         %SessionStoreInstance{} = session_store,
-        %TranscriptStoreInstance{} = transcript_store
+        %TranscriptStoreInstance{} = transcript_store,
+        tool_instances
       ) do
-    with {:ok, session} <- resolve_session(inbound.session_id, session_store) do
+    with :ok <- validate_tool_instances(tool_instances),
+         {:ok, session} <- resolve_session(inbound.session_id, session_store) do
       inbound = Map.put(inbound, :session_id, session.id)
 
       with {:ok, _message} <- append_user_message(inbound, transcript_store),
            {:ok, transcript_messages} <-
              TranscriptStoreInstance.list_by_session(transcript_store, session.id),
-           {:ok, result} <- AgentLoop.run(session.id, transcript_messages, provider),
+           {:ok, result} <-
+             AgentLoop.run(session.id, transcript_messages, provider, tool_instances),
            :ok <- append_transcript_messages(result.transcript_messages, transcript_store) do
         {:ok,
          %Message.Outbound{
@@ -53,6 +58,7 @@ defmodule Nexus.Orchestrator do
                provider,
                session_store,
                transcript_store,
+               tool_instances,
                transcript_messages,
                result
              )
@@ -61,7 +67,7 @@ defmodule Nexus.Orchestrator do
     end
   end
 
-  def run(%Message.Inbound{}, provider, session_store, transcript_store) do
+  def run(%Message.Inbound{}, provider, session_store, transcript_store, tool_instances) do
     cond do
       not match?(%ProviderInstance{}, provider) ->
         {:error, {:invalid_provider_reference, provider}}
@@ -71,6 +77,9 @@ defmodule Nexus.Orchestrator do
 
       not match?(%TranscriptStoreInstance{}, transcript_store) ->
         {:error, {:invalid_transcript_store_reference, transcript_store}}
+
+      not is_list(tool_instances) ->
+        {:error, {:invalid_tool_instances_reference, tool_instances}}
     end
   end
 
@@ -120,6 +129,7 @@ defmodule Nexus.Orchestrator do
          provider,
          session_store,
          transcript_store,
+         tool_instances,
          transcript_messages,
          result
        ) do
@@ -129,6 +139,7 @@ defmodule Nexus.Orchestrator do
         provider: summarize_instance(provider),
         session_store: summarize_instance(session_store),
         transcript_store: summarize_instance(transcript_store),
+        available_tools: summarize_tool_instances(tool_instances),
         transcript_message_count: length(transcript_messages),
         llm_messages: result.llm_messages
       }
@@ -175,4 +186,23 @@ defmodule Nexus.Orchestrator do
   end
 
   defp sanitize_config_entry(_key, value), do: value
+
+  defp validate_tool_instances(tool_instances) when is_list(tool_instances), do: :ok
+
+  defp validate_tool_instances(tool_instances),
+    do: {:error, {:invalid_tool_instances_reference, tool_instances}}
+
+  # Tool debug output stays small on purpose: at this stage we mostly want to
+  # know which tool names were visible to the provider for a given turn.
+  defp summarize_tool_instances(tool_instances) when is_list(tool_instances) do
+    Enum.map(tool_instances, fn
+      %ToolInstance{} = tool_instance ->
+        tool_instance
+        |> ToolInstance.definition()
+        |> Map.get(:name)
+
+      _other ->
+        "[INVALID TOOL INSTANCE]"
+    end)
+  end
 end

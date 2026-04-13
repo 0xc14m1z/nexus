@@ -48,6 +48,17 @@ defmodule Nexus.Providers.AnthropicTest do
         %Message.LLM{role: :user, content: "hello"},
         %Message.LLM{role: :assistant, content: "previous answer"},
         %Message.LLM{role: :user, content: "continue"}
+      ],
+      tools: [
+        %{
+          name: "current_time",
+          description: "Get the current UTC time as an ISO8601 timestamp.",
+          input_schema: %{
+            "type" => "object",
+            "properties" => %{},
+            "additionalProperties" => false
+          }
+        }
       ]
     }
 
@@ -64,6 +75,17 @@ defmodule Nexus.Providers.AnthropicTest do
              "model" => "claude-sonnet-4-20250514",
              "max_tokens" => 256,
              "system" => "System one.\n\nSystem two.",
+             "tools" => [
+               %{
+                 "name" => "current_time",
+                 "description" => "Get the current UTC time as an ISO8601 timestamp.",
+                 "input_schema" => %{
+                   "type" => "object",
+                   "properties" => %{},
+                   "additionalProperties" => false
+                 }
+               }
+             ],
              "messages" => [
                %{"role" => "user", "content" => "hello"},
                %{"role" => "assistant", "content" => "previous answer"},
@@ -122,6 +144,17 @@ defmodule Nexus.Providers.AnthropicTest do
     request = %Provider.Request{
       messages: [
         %Message.LLM{role: :user, content: "what time is it?"}
+      ],
+      tools: [
+        %{
+          name: "current_time",
+          description: "Get the current UTC time as an ISO8601 timestamp.",
+          input_schema: %{
+            "type" => "object",
+            "properties" => %{},
+            "additionalProperties" => false
+          }
+        }
       ]
     }
 

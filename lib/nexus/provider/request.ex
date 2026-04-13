@@ -2,16 +2,22 @@ defmodule Nexus.Provider.Request do
   @moduledoc """
   Structured request passed from the agent loop to a provider adapter.
 
-  For now it contains only the provider-facing LLM messages for the current
-  call. The shape is already explicit so the provider contract can evolve
-  without passing around loose positional arguments.
+  It contains:
+
+  - the provider-facing LLM messages for the current call
+  - the tool definitions available to the model for this call
+
+  The shape is already explicit so the provider contract can evolve without
+  passing around loose positional arguments.
   """
 
   alias Nexus.Message
+  alias Nexus.Tool
 
   @type t :: %__MODULE__{
-          messages: [Message.LLM.t()]
+          messages: [Message.LLM.t()],
+          tools: [Tool.definition()]
         }
 
-  defstruct messages: []
+  defstruct messages: [], tools: []
 end

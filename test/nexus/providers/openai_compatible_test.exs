@@ -52,6 +52,17 @@ defmodule Nexus.Providers.OpenAICompatibleTest do
         %Message.LLM{role: :user, content: "hello"},
         %Message.LLM{role: :assistant, content: "previous answer"},
         %Message.LLM{role: :user, content: "continue"}
+      ],
+      tools: [
+        %{
+          name: "current_time",
+          description: "Get the current UTC time as an ISO8601 timestamp.",
+          input_schema: %{
+            "type" => "object",
+            "properties" => %{},
+            "additionalProperties" => false
+          }
+        }
       ]
     }
 
@@ -66,6 +77,20 @@ defmodule Nexus.Providers.OpenAICompatibleTest do
     assert Keyword.fetch!(opts, :json) == %{
              "model" => "openai/gpt-oss-20b",
              "temperature" => 0.2,
+             "tools" => [
+               %{
+                 "type" => "function",
+                 "function" => %{
+                   "name" => "current_time",
+                   "description" => "Get the current UTC time as an ISO8601 timestamp.",
+                   "parameters" => %{
+                     "type" => "object",
+                     "properties" => %{},
+                     "additionalProperties" => false
+                   }
+                 }
+               }
+             ],
              "messages" => [
                %{"role" => "system", "content" => "System one."},
                %{"role" => "user", "content" => "hello"},
@@ -189,6 +214,17 @@ defmodule Nexus.Providers.OpenAICompatibleTest do
     request = %Provider.Request{
       messages: [
         %Message.LLM{role: :user, content: "What time is it?"}
+      ],
+      tools: [
+        %{
+          name: "current_time",
+          description: "Get the current UTC time as an ISO8601 timestamp.",
+          input_schema: %{
+            "type" => "object",
+            "properties" => %{},
+            "additionalProperties" => false
+          }
+        }
       ]
     }
 

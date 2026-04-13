@@ -15,9 +15,14 @@ defmodule Nexus do
   @spec run(Message.Inbound.t(), keyword()) :: {:ok, Message.Outbound.t()} | {:error, term()}
   def run(%Message.Inbound{} = inbound, opts) when is_list(opts) do
     with {:ok,
-          %{provider: provider, session_store: session_store, transcript_store: transcript_store}} <-
+          %{
+            provider: provider,
+            session_store: session_store,
+            transcript_store: transcript_store,
+            tools: tools
+          }} <-
            resolve_runtime_dependencies(opts) do
-      Orchestrator.run(inbound, provider, session_store, transcript_store)
+      Orchestrator.run(inbound, provider, session_store, transcript_store, tools)
     end
   end
 
